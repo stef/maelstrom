@@ -43,14 +43,14 @@ def allMessages():
 
 def topReceivers():
    # SELECT person.id, person.fullname, person.username, person.mailserver FROMperson,  (SELECT DISTINCT message.sender_id AS senderID FROM person,message WHERE ((message.sender_id) = (person.id)))  Message_senderID WHERE((person.id) = (Message_senderID.senderID))
-   results=Role._connection.queryAll("""SELECT count(person.id) as count,
-                                               person.id,
+   results=Role._connection.queryAll("""SELECT count(email.id) as count,
                                                person.fullname,
-                                               person.username,
-                                               person.mailserver
-                                        FROM person, role
-                                        WHERE person.id==role.person_id
-                                        GROUP BY person.id
+                                               email.username,
+                                               email.mailserver
+                                        FROM person, email, role
+                                        WHERE role.email_id==email.id AND 
+                                              email.owner_id==person.id
+                                        GROUP BY email.id
                                         ORDER BY count DESC""")
    n=len(results)
    #q=Role.select().#throughTo.person
@@ -59,9 +59,7 @@ def topReceivers():
    try:
       #for a in q:
       for a in results:
-         #print a.fullname, a.username+"@"+a.mailserver
-         print a
-         #print a[0], a[2], a[3]+"@"+a[4]
+         print a[0], a[1] #, a[2]+"@"+a[3]
    except(TypeError):
       print results
 

@@ -6,35 +6,46 @@ from email.utils import getaddresses, parsedate
 from objects import *
 from utils import decode_header
 
-def fetchPerson(person):
-   if(person[0]):
-      fullname=decode_header(person[0]).encode("utf-8")
-   else:
-      fullname=''
+def fetchEmail(mail,owner=None):
+   if(not mail):
+      return
 
    username=''
    mailserver=''
-   if(person[1]):
-      mail=person[1].split("@")
-      if(len(mail)>2):
-         print person
-         print "more than 2 elements to a split emailaddress, bailing out"
-         sys.exit(1)
-      elif(len(mail)==2):
-         mailserver=mail[1].lower()
-      username=mail[0].lower()
+   parts=mail.split("@")
+   if(len(parts)>2):
+      print mail
+      print "more than 2 elements to a split emailaddress, bailing out"
+      sys.exit(1)
+   elif(len(parts)==2):
+      mailserver=parts[1].lower()
+   username=parts[0].lower()
 
-   q=Person.select(AND(Person.q.username==username,
-                       Person.q.mailserver==mailserver))
+   if(not owner):
+      owner=''
+      names=username.split('.')
+      if(len(names)>1):
+         ownername=" ".join(map(lambda x: x[0].upper()+x[1:],names))
+         owner=fetchPerson(ownername)
+      else:
+         owner=fetchPerson('')
+
+   q=Email.select(AND(Email.q.username==username,
+               Email.q.mailserver==mailserver))
    try:
       return q.getOne()
    except(SQLObjectNotFound):
-      return Person(fullname=fullname,
-                    username=username,
-                    mailserver=mailserver)
-   except(SQLObjectIntegrityError):
-      print "oops. database headers probably contains multiple entries for", header
-      sys.exit(1)
+      return Email(username=username, mailserver=mailserver,owner=owner)
+
+def fetchPerson(person):
+   if(not person):
+      return
+   fullname=decode_header(person).encode("utf-8")
+   q=Person.select(Person.q.fullname==fullname)
+   try:
+      return q.getOne()
+   except(SQLObjectNotFound):
+      return Person(fullname=fullname)
 
 def fetchHeader(header):
    q=Header.select(Header.q.name==header)
@@ -49,37 +60,42 @@ def fetchHeader(header):
 
 def parseMbox(file):
    for message in mailbox.mbox(file):
-      unixfrom=message.get_from().split(" ")
-      if message['date']:
-         t=parsedate(message['date'])
-      else:
-         t=parsedate(" ".join(unixfrom[1:]))
-      timestamp=datetime.datetime(*t[:6])
-
-      # fetch sender
-      senders=getaddresses(message.get_all('from',[]))
-      if len(senders):
-         s=fetchPerson(senders[0])
-      else: 
-         s=fetchPerson((unixfrom[0],''))
-      msg=Message(delivered=timestamp,messageid=message['message-id'],sender=s,path=file)
-      #print "msg",msg
-
-      for field in ["to","cc","resent-to","resent-cc"]:
-         for address in getaddresses(message.get_all(field, [])):
-            # fetch person
-            p=fetchPerson(address)
-
-            # fetch header
-            h=fetchHeader(field)
-
-            role=Role(person=p,msg=msg,header=h)
-            #print "role",role
-         del message[field]
-
+      msg=parseMessage(message,file)
+      parseContacts(message,msg)
       parseHeaders(message,msg)
       #TODO: mailindexer
       # parseBody(message,msg)
+
+def parseMessage(message,file):
+   # TODO refactor into own fun: create message
+   unixfrom=message.get_from().split(" ")
+   if message['date']:
+      t=parsedate(message['date'])
+   else:
+      t=parsedate(" ".join(unixfrom[1:]))
+   timestamp=datetime.datetime(*t[:6])
+
+   # fetch sender
+   senders=getaddresses(message.get_all('from',[]))
+   if len(senders):
+      p=fetchPerson(decode_header(senders[0][0]).encode("utf-8"))
+      e=fetchEmail(senders[0][1],p)
+   else: 
+      e=fetchEmail(unixfrom[0])
+   #print "msg",msg
+   return Message(delivered=timestamp,messageid=message['message-id'],sender=e,path=file)
+
+def parseContacts(message,msg):
+   for field in ["to","cc","resent-to","resent-cc"]:
+      for address in getaddresses(message.get_all(field, [])):
+         # fetch person
+         p=fetchPerson(address[0])
+         e=fetchEmail(address[1],p)
+         # fetch header
+         h=fetchHeader(field)
+         Role(email=e,msg=msg,header=h)
+         #print "role",role
+      del message[field]
 
 def parseHeaders(message,msg):
    for header in map(str.lower,message.keys()):
@@ -121,6 +137,7 @@ if __name__=='__main__':
    HeaderValue.createTable(ifNotExists=True)
    Person.createTable(ifNotExists=True)
    Role.createTable(ifNotExists=True)
+   Email.createTable(ifNotExists=True)
    Message.createTable(ifNotExists=True)
    psyco.full()
    sys.exit(main())

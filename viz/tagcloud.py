@@ -134,7 +134,7 @@ image_left_margin = 5
 image_right_margin = 5
 
 # Find fonts on your system and set this path:
-fontPath="/Library/Fonts/arial.ttf"
+fontPath="/usr/share/fonts/truetype/msttcorefonts/arial.ttf"
 
 arial18 = ImageFont.truetype(fontPath,18) 
 arial28 = ImageFont.truetype(fontPath,28) 
