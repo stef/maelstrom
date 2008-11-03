@@ -111,6 +111,5 @@ def main():
    #results(receivedMessages())
 
 if __name__=='__main__':
-   sqlhub.processConnection = connectionForURI('sqlite:' + os.path.abspath('messages.db'))
    psyco.full()
    sys.exit(main())

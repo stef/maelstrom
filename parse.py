@@ -117,7 +117,6 @@ def main():
       parseMbox(file)
 
 if __name__=='__main__':
-   sqlhub.processConnection = connectionForURI('sqlite:' + os.path.abspath('messages.db'))
    Header.createTable(ifNotExists=True)
    HeaderValue.createTable(ifNotExists=True)
    Person.createTable(ifNotExists=True)

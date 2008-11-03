@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 from sqlobject import *
-import psyco, sys
+import psyco, sys, os
 
 class Message(SQLObject):
    delivered=DateTimeCol()
@@ -39,7 +39,8 @@ def main():
    Role.createTable(ifNotExists=True)
    Message.createTable(ifNotExists=True)
 
+sqlhub.processConnection = connectionForURI('sqlite:' + os.path.abspath('db/messages.db'))
+
 if __name__=='__main__':
-   sqlhub.processConnection = connectionForURI('sqlite:' + os.path.abspath('messages.db'))
    psyco.full()
    sys.exit(main())
