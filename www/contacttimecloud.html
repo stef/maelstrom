@@ -1,0 +1,104 @@
+<html>
+   <head>
+      <script src="jquery.js" type="text/javascript" charset="utf-8"></script>
+      <script src="jquery-ui.js" type="text/javascript" charset="utf-8"></script>
+      <link href="style.css" rel="stylesheet" type="text/css" />
+      <link href="http://dev.jquery.com/view/tags/ui/latest/themes/flora/flora.all.css" rel="stylesheet" type="text/css" />
+      <script type="text/javascript" src="tagcloud.js"></script>
+      <script type="text/javascript">
+         <!--
+         var start = new Date("Jan 15, 2007");
+         var end = new Date("Dec 31, 2007");
+         var window_size = 30;
+         var steps = 1;
+         var timeout=100;
+
+         function loadResults(data) {
+            var tc = TagCloud.create();
+
+            for (id in data) {
+               tc.add(data[id]['name'],
+                     parseInt(data[id]['count']),
+                     'contactnetwork?c='+data[id]['name'],
+                     Date.parse(getDate(data[id]['lastseen'])));
+            }
+            tc.loadEffector('CountSize').base(15).range(10);
+            tc.loadEffector('DateTimeColor');
+            tc.setup('contacttimecloud');
+         }
+
+         function getDateString(date) {
+            var d  = date.getDate();
+            var day = (d < 10) ? '0' + d : d;
+            var m = date.getMonth() + 1;
+            var month = (m < 10) ? '0' + m : m;
+            var yy = date.getYear();
+            var year = (yy < 1000) ? yy + 1900 : yy;
+            return(year + "-" + month + "-" + day);
+         }
+
+         function getDate(string) {
+            var frgs=string.split("-");
+            return(new Date(frgs[0],frgs[1],frgs[2]));
+         }
+
+         function animate() {
+            var wend=new Date(start.getTime() + window_size*24*60*60*1000)
+            if(wend<end) {
+               var query="contacttimecloud.php?start="+getDateString(start)+"&end="+getDateString(wend);
+
+               $('#startdate').text(getDateString(start));
+               $('#enddate').text(getDateString(wend));
+
+               start=new Date(start.getTime() + steps*24*60*60*1000);
+               $.getJSON(query,loadResults);
+               setTimeout("animate()", timeout);
+
+            }
+
+         }
+
+         $(document).ready(function() {
+            animate();
+            /*
+            $('#interval').slider({max: 99999, min: 0});
+            $('#steps').slider({max: 365, min: 0});
+            $("#inline").datepicker({    
+               rangeSelect: true, 
+               onSelect: function(date) {
+                  alert("The chosen date is " + date);}});
+            $("#altInline").hide();
+            */
+         })
+
+         /*
+         function setInlineDate() { 
+            try { 
+               var date = $.datepicker.parseDate("mm/dd/yy", $("#altInline").val()); 
+               $("#inline").datepicker("setDate", date); 
+            } 
+            catch (e) { 
+               // Ignore 
+            } 
+         } 
+         */
+
+         -->
+      </script>
+
+   </head>
+   <body>
+      <h1>TagCloud Sample</h1>
+      <span>Start Date</span>
+      <span id="startdate" ></span>
+      <span>End Date</span>
+      <span id="enddate" ></span>
+      <div id="contacttimecloud"></div>
+      <!--
+      <h2>Settings</h2>
+      <input type="text" id="altInline" size="10"/> 
+      <div id="inline"></div> 
+      <input type="text" id="interval" value="Select the length of the interval" style="width:300px;"/>
+      <input type="text" id="steps" value="Granularity of animation" style="width:300px;"/>-->
+   </body>
+</html>
