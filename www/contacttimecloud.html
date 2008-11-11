@@ -63,23 +63,14 @@
             var mails=[];
             for (id in data) {
                var curdate=getDate(data[id]['delivered']);
-            alert("nextdate"+nextdate);
-            alert("curdate"+curdate);
-            asdf
-            //alert(nextdate<curdate);
                while(nextdate<curdate) {
                   mails.push(0);
                   nextdate=addDay(nextdate,1);
-                  alert(nextdate);
                }
-            alert("asdf");
-            alert("nextdate"+nextdate);
-            alert("curdate"+curdate);
-            //   mails.push(parseInt(data[id]['count']));
-            //   nextdate=addDay(nextdate,1);
+               mails.push(parseInt(data[id]['count']));
+               nextdate=addDay(nextdate,1);
             }
-            alert(mails);
-            //$('#sparkline').sparkline(mails, { type:'line', barColor:'orange', spotColor:'red' });
+            $('#sparkline').sparkline(mails, { type:'line', barColor:'orange', spotColor:'red', height:'30px', width:'340px' });
          }
 
          function animate() {
@@ -130,12 +121,12 @@
    </head>
    <body>
       <h1>TagCloud Sample</h1>
-      <span id="sparkline" /><br />
       <input type="submit" id="pause" value=">" />
       <span>Start Date</span>
       <span id="startdate" ></span>
       <span>End Date</span>
       <span id="enddate" ></span>
+      <span id="sparkline" /><br />
       <div id="contacttimecloud"></div>
       <!--
       <h2>Settings</h2>

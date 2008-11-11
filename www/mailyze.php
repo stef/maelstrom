@@ -56,10 +56,10 @@ function mailFrequency($db) {
    $q="SELECT date(delivered) as delivered,
              count(id) as count
         FROM message
-        WHERE message.delivered>='$start' AND
-              message.delivered<'$end'
-        GROUP BY date(message.delivered)
-        ORDER BY message.delivered";
+        WHERE delivered>='$start' AND
+              delivered<'$end'
+        GROUP BY date(delivered)
+        ORDER BY date(delivered)";
 
    foreach ($db->query($q) as $row) {
       $results[]=array('count' => $row['count'],
