@@ -2,9 +2,10 @@
 
 import sys, os, psyco, datetime, email
 from sqlobject import *
-from objects import *
 from email.utils import getaddresses, parsedate
-from utils import decode_header
+from lib.objects import *
+from lib.utils import decode_header
+from viz.tagcloud import drawCloud
 
 def results(q):
    print "q",q
@@ -41,27 +42,55 @@ def allMessages():
    for a in Message.select():
       print a
 
-def topReceivers():
-   # SELECT person.id, person.fullname, person.username, person.mailserver FROMperson,  (SELECT DISTINCT message.sender_id AS senderID FROM person,message WHERE ((message.sender_id) = (person.id)))  Message_senderID WHERE((person.id) = (Message_senderID.senderID))
-   results=Role._connection.queryAll("""SELECT count(email.id) as count,
-                                               person.fullname,
-                                               email.username,
-                                               email.mailserver
-                                        FROM person, email, role
-                                        WHERE role.email_id==email.id AND 
-                                              email.owner_id==person.id
-                                        GROUP BY email.id
-                                        ORDER BY count DESC""")
-   n=len(results)
-   #q=Role.select().#throughTo.person
-   #n=q.count()
-   print "top receivers",n
+def topReceiversWindow(days):
+   q=Message.select(orderBy="delivered")
    try:
-      #for a in q:
-      for a in results:
-         print a[0], a[1] #, a[2]+"@"+a[3]
-   except(TypeError):
-      print results
+      start=(q[0].delivered)
+   except(SQLObjectNotFound):
+      print "empty db, bailing out."
+      sys.exit(1)
+   q=Message.select(orderBy="delivered").reversed()
+   try:
+      last=(q[0].delivered)
+   except(SQLObjectNotFound):
+      print "empty db, bailing out."
+      sys.exit(1)
+   i=0
+   while start<last:
+      end=start+datetime.timedelta(days)
+      print end
+      
+      q="""SELECT person.fullname,
+                  count(person.id) as count
+           FROM person, email, role, message
+           WHERE role.email_id==email.id AND 
+                 email.owner_id==person.id AND
+                 role.msg_id==message.id AND
+                 message.delivered>='"""+start.date().isoformat()+"""' AND
+                 message.delivered<'"""+end.date().isoformat()+"""'
+           GROUP BY person.fullname
+           ORDER BY count DESC"""
+      results=Message._connection.queryAll(q)
+      n=len(results)
+      tags=sorted(results)
+      img=drawCloud(tags)
+      img.save("tmp/receivers-"+str(i)+".png") 
+      start=start+datetime.timedelta(2)
+      i+=1
+
+def topReceivers():
+   q="""SELECT person.fullname,
+               count(person.id) as count
+        FROM person, email, role
+        WHERE role.email_id==email.id AND 
+              email.owner_id==person.id
+        GROUP BY person.fullname
+        HAVING count>1
+        ORDER BY count DESC"""
+   results=Role._connection.queryAll(q)
+   n=len(results)
+   tags=sorted(results)
+   drawCloud(tags).save("topreceivers.png") 
 
 def topSenders():
    q=Message.select(Message.q.sender==Person.q.id).throughTo.sender
@@ -101,7 +130,8 @@ def allPersons():
       print q
 
 def main():
-   topReceivers()
+   topReceiversWindow(30)
+   #topReceivers()
    #topSenders()
    #allPersons()
    #allMessages()

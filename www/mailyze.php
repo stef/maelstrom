@@ -40,10 +40,32 @@ function contactTimeCloud($db) {
          'count'=> $row['count'],
          'lastseen'=> $row['lastseen']));
    }
-   print json_encode($results);
+   return ($results);
 }
 
 function mailFrequency($db) {
+   list($start, $time)=mailTimeFrame($db);
+
+   if(isset($_GET['start'])) {
+      $start=$_GET['start'];
+   }
+   if(isset($_GET['end'])) {
+      $end=$_GET['end'];
+   }
+
+   $q="SELECT date(delivered) as delivered,
+             count(id) as count
+        FROM message
+        WHERE message.delivered>='$start' AND
+              message.delivered<'$end'
+        GROUP BY date(message.delivered)
+        ORDER BY message.delivered";
+
+   foreach ($db->query($q) as $row) {
+      $results[]=array('count' => $row['count'],
+                       'delivered' => $row['delivered']);
+   }
+   return ($results);
 }
 
 if(isset($_GET['op'])) {

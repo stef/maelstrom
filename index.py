@@ -3,8 +3,8 @@
 import mailbox, sys, os, psyco, datetime, email
 from sqlobject import *
 from email.utils import getaddresses, parsedate
-from objects import *
-from utils import decode_header
+from lib.objects import *
+from lib.utils import decode_header
 
 def fetchEmail(mail,owner=None):
    if(not mail):
@@ -40,7 +40,7 @@ def fetchEmail(mail,owner=None):
 def fetchPerson(person):
    if(not person):
       return
-   fullname=decode_header(person).encode("utf-8")
+   fullname=decode_header(person).encode("utf-8").strip(" '\"")
    q=Person.select(Person.q.fullname==fullname)
    try:
       return q.getOne()
