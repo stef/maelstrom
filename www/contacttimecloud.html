@@ -1,132 +1,22 @@
 <html>
    <head>
       <script src="jquery.js" type="text/javascript" charset="utf-8"></script>
-      <script src="jquery-ui.js" type="text/javascript" charset="utf-8"></script>
       <script src="jquery.sparkline.js" type="text/javascript" charset="utf-8"></script>
-      <link href="style.css" rel="stylesheet" type="text/css" />
-      <link href="http://dev.jquery.com/view/tags/ui/latest/themes/flora/flora.all.css" rel="stylesheet" type="text/css" />
       <script type="text/javascript" src="tagcloud.js"></script>
-      <script type="text/javascript">
-         <!--
-         var start = new Date("Jan 15, 2007");
-         var end = new Date("Dec 31, 2007");
-         var window_size = 30;
-         var steps = 1;
-         var timeout=200;
-         var play=0;
-
-         function togglePlay(obj) {
-            if(play) {
-               play=0;
-               obj.val(">");
-            } else {
-               play=1;
-               obj.val("||");
-               animate();
-            }
-         }
-
-         function getDateString(date) {
-            var d  = date.getDate();
-            var day = (d < 10) ? '0' + d : d;
-            var m = date.getMonth() + 1;
-            var month = (m < 10) ? '0' + m : m;
-            var yy = date.getYear();
-            var year = (yy < 1000) ? yy + 1900 : yy;
-            return(year + "-" + month + "-" + day);
-         }
-
-         function getDate(string) {
-            var frgs=string.split("-");
-            return(new Date(frgs[0],frgs[1],frgs[2]));
-         }
-
-         function addDay(d,n) {
-            return new Date(d.getTime() + n*24*60*60*1000);
-         }
-
-         function loadTagcloud(data) {
-            var tc = TagCloud.create();
-            for (id in data) {
-               tc.add(data[id]['name'],
-                     parseInt(data[id]['count']),
-                     'contactnetwork?c='+data[id]['name'],
-                     getDate(data[id]['lastseen']));
-            }
-            tc.loadEffector('CountSize').base(15).range(10);
-            tc.loadEffector('DateTimeColor');
-            tc.setup('contacttimecloud');
-         }
-
-         function loadSparkline(data) {
-            var nextdate=start;
-            var mails=[];
-            for (id in data) {
-               var curdate=getDate(data[id]['delivered']);
-               while(nextdate<curdate) {
-                  mails.push(0);
-                  nextdate=addDay(nextdate,1);
-               }
-               mails.push(parseInt(data[id]['count']));
-               nextdate=addDay(nextdate,1);
-            }
-            $('#sparkline').sparkline(mails, { type:'line', barColor:'orange', spotColor:'red', height:'30px', width:'340px' });
-         }
-
-         function animate() {
-            var wend=new Date(start.getTime() + window_size*24*60*60*1000);
-            if(play) { setTimeout("animate()", timeout); }
-            if(wend<=end) {
-               var query="mailyze.php?op=contactTimeCloud&start="+getDateString(start)+"&end="+getDateString(wend);
-               $.getJSON(query,loadTagcloud);
-               $('#startdate').text(getDateString(start));
-               $('#enddate').text(getDateString(wend));
-               start=new Date(start.getTime() + steps*24*60*60*1000);
-            }
-
-         }
-
-         $(document).ready(function() {
-            animate();
-            $("#pause").click(function () { togglePlay($(this)); });
-            var query="mailyze.php?op=mailFrequency&start="+getDateString(start)+"&end="+getDateString(end);
-            $.getJSON(query,loadSparkline);
-
-            /*
-            $('#interval').slider({max: 99999, min: 0});
-            $('#steps').slider({max: 365, min: 0});
-            $("#inline").datepicker({    
-               rangeSelect: true, 
-               onSelect: function(date) {
-                  alert("The chosen date is " + date);}});
-            $("#altInline").hide();
-            */
-         })
-
-         /*
-         function setInlineDate() { 
-            try { 
-               var date = $.datepicker.parseDate("mm/dd/yy", $("#altInline").val()); 
-               $("#inline").datepicker("setDate", date); 
-            } 
-            catch (e) { 
-               // Ignore 
-            } 
-         } 
-         */
-
-         -->
-      </script>
+      <script type="text/javascript" src="maelstrom.js"></script>
+      <link href="style.css" rel="stylesheet" type="text/css" />
+      <!--<script src="jquery-ui.js" type="text/javascript" charset="utf-8"></script>-->
+      <!--<link href="http://dev.jquery.com/view/tags/ui/latest/themes/flora/flora.all.css" rel="stylesheet" type="text/css" />-->
 
    </head>
    <body>
-      <h1>TagCloud Sample</h1>
+      <h1>TimeCloud</h1>
       <input type="submit" id="pause" value=">" />
-      <span>Start Date</span>
-      <span id="startdate" ></span>
-      <span>End Date</span>
-      <span id="enddate" ></span>
-      <span id="sparkline" /><br />
+      <div id="sparkline" > </div>
+      <div style="width: 480px; font-size: 12px; margin: 0px 10px 30px;">
+         <span style="float: left;" id="startdate" ></span>
+         <span style="float: right;" id="enddate" ></span>
+      </div>
       <div id="contacttimecloud"></div>
       <!--
       <h2>Settings</h2>

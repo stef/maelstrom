@@ -23,22 +23,44 @@ function contactTimeCloud($db) {
    }
 
    $q="SELECT person.fullname as contact,
-               count(person.id) as count,
-               max(delivered) as lastseen
+               count(message.id) as count,
+               date(message.delivered) as date
         FROM person, email, role, message
         WHERE role.email_id==email.id AND 
               email.owner_id==person.id AND
               role.msg_id==message.id AND
-              message.delivered>='$start' AND
-              message.delivered<'$end'
-        GROUP BY person.fullname
-        ORDER BY contact";
-
+              date(message.delivered)>='$start' AND
+              date(message.delivered)<'$end'
+              GROUP BY date(delivered), person.fullname
+              ORDER BY date(delivered)";
+   
+   $results=array();
+   $curdate="00-00-00";
    foreach ($db->query($q) as $row) {
-      $date=$date[0];
-      $results[]=(array('name'=> $row['contact'],
-         'count'=> $row['count'],
-         'lastseen'=> $row['lastseen']));
+      //print_r($row);
+      //print "<br>";
+      $date=$row['date'];
+      if($date>$curdate) {
+         // row is a new day
+         if(isset($res)) {
+            // store the list of contact volumes in result vector
+            $results[]=array($curdate, $res);
+         }
+         // create a new list of contact volumes
+         $res=array(array($row['contact'], $row['count']));
+         // set curdate to the currently created new day
+         $curdate=$date;
+      } elseif($date==$curdate) {
+         // store the contact in the current days volume list
+         $res[]=array($row['contact'], $row['count']);
+      } else {
+         print "curdate $curdate";
+         print "date $date";
+         print_r($row);
+      }
+   }
+   if($res) {
+      $results[]=array($curdate, $res);
    }
    return ($results);
 }
@@ -77,9 +99,11 @@ if(isset($_GET['op'])) {
    }
 
    if($_GET['op']=="contactTimeCloud") { 
+      //header("Content-type: text/plain");
       print json_encode(contactTimeCloud($db));
    } 
    elseif($_GET['op']=="mailFrequency") {
+      //header("Content-type: text/plain");
       print json_encode(mailFrequency($db));
    }
 }
