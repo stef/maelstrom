@@ -1,10 +1,15 @@
 #!/usr/bin/python
 
+# BUGS: the mbox parse chockes on messages that have a line starting with From
+# in the body.
 import mailbox, sys, os, psyco, datetime, email
 from sqlobject import *
 from email.utils import getaddresses, parsedate
 from lib.objects import *
 from lib.utils import decode_header
+
+PERSONMAPFILE='db/persons.map'
+personmap={}
 
 def fetchEmail(mail,owner=None):
    if(not mail):
@@ -26,9 +31,9 @@ def fetchEmail(mail,owner=None):
       names=username.split('.')
       if(len(names)>1):
          ownername=" ".join(map(lambda x: x[0].upper()+x[1:],names))
-         owner=fetchPerson(ownername)
+         owner=fetchPerson(ownername,mail)
       else:
-         owner=fetchPerson('')
+         owner=fetchPerson('',mail)
 
    q=Email.select(AND(Email.q.username==username,
                Email.q.mailserver==mailserver))
@@ -37,10 +42,13 @@ def fetchEmail(mail,owner=None):
    except(SQLObjectNotFound):
       return Email(username=username, mailserver=mailserver,owner=owner)
 
-def fetchPerson(person):
+def fetchPerson(person,mail=None):
    if(not person):
       return
-   fullname=decode_header(person).encode("utf-8").strip(" '\"")
+   if(mail and personmap.has_key(mail)):
+      fullname=personmap[mail]
+   else:
+      fullname=decode_header(person).encode("utf-8").strip(" '\"")
    q=Person.select(Person.q.fullname==fullname)
    try:
       return q.getOne()
@@ -61,8 +69,9 @@ def fetchHeader(header):
 def parseMbox(file):
    for message in mailbox.mbox(file):
       msg=parseMessage(message,file)
-      parseContacts(message,msg)
-      parseHeaders(message,msg)
+      if(msg):
+         parseContacts(message,msg)
+         parseHeaders(message,msg)
       #TODO: mailindexer
       # parseBody(message,msg)
 
@@ -73,12 +82,16 @@ def parseMessage(message,file):
       t=parsedate(message['date'])
    else:
       t=parsedate(" ".join(unixfrom[1:]))
-   timestamp=datetime.datetime(*t[:6])
+   try:
+      timestamp=datetime.datetime(*t[:6])
+   except:
+      # pass this message with malformed header
+      return None
 
    # fetch sender
    senders=getaddresses(message.get_all('from',[]))
    if len(senders):
-      p=fetchPerson(decode_header(senders[0][0]).encode("utf-8"))
+      p=fetchPerson(decode_header(senders[0][0]).encode("utf-8"),senders[0][1])
       e=fetchEmail(senders[0][1],p)
    else: 
       e=fetchEmail(unixfrom[0])
@@ -89,7 +102,7 @@ def parseContacts(message,msg):
    for field in ["to","cc","resent-to","resent-cc"]:
       for address in getaddresses(message.get_all(field, [])):
          # fetch person
-         p=fetchPerson(address[0])
+         p=fetchPerson(address[0],address[1])
          e=fetchEmail(address[1],p)
          # fetch header
          h=fetchHeader(field)
@@ -128,6 +141,15 @@ def parseBody(message,msg):
 #     fp.close()
 
 def main():
+   # load email to person mappings
+   if(os.path.exists(PERSONMAPFILE)):
+      fp=open(PERSONMAPFILE,'r')
+      while(fp):
+         line=fp.readline()
+         if not line:
+            break
+         (email,name)=line.split(" ",1)
+         personmap[email]=name.strip()
    for file in sys.argv[1:]:
       print "parsing file:", file
       parseMbox(file)

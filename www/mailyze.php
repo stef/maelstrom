@@ -1,6 +1,7 @@
 <?php
 
-$dburl='sqlite:'.$_SERVER['DOCUMENT_ROOT'].'/mailyze/trunk/db/messages.db';
+$MAILBOXOWNER="Marsiske Stefan";
+$dburl='sqlite:'.$_SERVER['DOCUMENT_ROOT'].'/mailyze/db/messages.db';
 
 function mailTimeFrame($db) {
    $q='SELECT max(delivered) AS max, min(delivered) as min FROM message';
@@ -14,6 +15,7 @@ function mailTimeFrame($db) {
 
 function contactTimeCloud($db) {
    list($start, $time)=mailTimeFrame($db);
+   global $MAILBOXOWNER;
 
    if(isset($_GET['start'])) {
       $start=$_GET['start'];
@@ -29,11 +31,11 @@ function contactTimeCloud($db) {
         WHERE role.email_id==email.id AND 
               email.owner_id==person.id AND
               role.msg_id==message.id AND
+              person.fullname!='$MAILBOXOWNER' AND
               date(message.delivered)>='$start' AND
               date(message.delivered)<'$end'
               GROUP BY date(delivered), person.fullname
               ORDER BY date(delivered)";
-   
    $results=array();
    $curdate="00-00-00";
    foreach ($db->query($q) as $row) {
