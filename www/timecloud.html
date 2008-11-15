@@ -4,17 +4,29 @@
       <script src="jquery.sparkline.js" type="text/javascript" charset="utf-8"></script>
       <script type="text/javascript" src="tagcloud.js"></script>
       <script type="text/javascript" src="maelstrom.js"></script>
+      <script type="text/javascript">
+         $(document).ready(function() {
+            $("#pause").click(function () { togglePlay($(this)); });
+            $("#step").click(function () { animate(); });
+            var timeConstraint="&start="+dateToStr(start)+"&end="+dateToStr(end);
+            var query="mailyze.php?op=mailFrequency"+timeConstraint;
+            $.getJSON(query,loadSparkline);
+            var query="mailyze.php?op=contactTimeCloud"+timeConstraint;
+            $.getJSON(query,loadTimecloud);
+         })
+      </script>
       <link href="style.css" rel="stylesheet" type="text/css" />
    </head>
    <body>
       <h1>TimeCloud</h1>
       <input type="submit" id="pause" value=">" />
+      <input type="submit" id="step" value="+" />
       <div id="sparkline" > </div>
       <div style="width: 480px; font-size: 12px; margin: 0px 10px 30px;">
          <span style="float: left;" id="startdate" ></span>
          <span style="float: right;" id="enddate" ></span>
       </div>
-      <div id="contacttimecloud"></div>
+      <div id="tagcloud"></div>
       <!--
       <h2>Settings</h2>
       <input type="text" id="altInline" size="10"/> 

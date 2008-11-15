@@ -1,7 +1,7 @@
-* { margin:  0; padding: 0; }
-div#contacttimecloud { width: 500px; }
+* { margin:  0; padding: 0; font-family: "Trebuchet MS", sans-serif }
+div#tagcloud { width: 500px; }
 #sparkline { padding: 2px 2px 0px; margin: 10px 10px 2px; }
-ul.tagcloud-list { border: 1px solid #000; font-size: 100%; font-weight: bold; font-family: "Arial", "sans-self"; padding: 2px; margin: 10px; }
+ul.tagcloud-list { font-size: 100%; font-weight: bold; padding: 2px; margin: 10px; }
 li.tagcloud-base { font-size: 24px; display: inline; white-space: nowrap; }
 a.tagcloud-anchor { text-decoration: none; }
 a.tagcloud-anchor:hover { background-color: #ddd; }
