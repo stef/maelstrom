@@ -50,7 +50,7 @@ function getRenderedStrSize(str,style) {
    return fs;
 }
 
-function loadSparkline(data,target) {
+function drawSparkline(data,target) {
    var nextdate=strToDate(data[0]['delivered']);
    var mails=[];
    for (id in data) {
@@ -153,7 +153,7 @@ function loadTimecloud(data) {
    enddate=contactVolumes[cstart+window_size][0];
    $('#startdate').text(startdate);
    $('#enddate').text(enddate);
-   loadSparkline(sparkline,'#sparkline');
+   drawSparkline(sparkline,'#sparkline');
    var cend=toSliderScale(window_size);
    $('#slide').slider({ handles: [{start: 0, id:'handle1'}, {start: cend, id:'handle2'}],
          range: true, change: function(e,ui) { console.log(ui.range); } });
@@ -206,7 +206,7 @@ function animate() {
       $('#enddate').text(contactVolumes[cstart+window_size][0]);
       $('#slide').slider("moveTo", toSliderScale(cstart), 0)
       $('#slide').slider("moveTo", toSliderScale(cstart+window_size), 1)
-      loadSparkline(sparkline,'#sparkline');
+      drawSparkline(sparkline,'#sparkline');
 
       // draw tagcloud (current frame)
       drawTagcloud(listToDict(tags));

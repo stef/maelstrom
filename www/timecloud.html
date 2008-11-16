@@ -17,7 +17,7 @@
             $("#step").click(function () { animate(); });
             var timeConstraint="&start="+dateToStr(start)+"&end="+dateToStr(end);
             var query="mailyze.php?op=mailFrequency"+timeConstraint;
-            $.getJSON(query,function(data) { loadSparkline(data,'#overview')});
+            $.getJSON(query,function(data) { drawSparkline(data,'#overview')});
             var query="mailyze.php?op=contactTimeCloud"+timeConstraint;
             $.getJSON(query,loadTimecloud);
          })
