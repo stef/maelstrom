@@ -18,7 +18,7 @@ if(isset($_GET['c'])) {
          $(document).ready(function() {
             var params="&c=<?php print urlencode($person)?>";
             var query="mailyze.php?op=contactMails"+params;
-            $.getJSON(query,function(data) { drawSparkline(data,'#sparkline',sparklineStyle)});
+            $.getJSON(query,function(data) { drawSparkline(data,'#timegraph',sparklineStyle)});
             var query="mailyze.php?op=secondContacts"+params;
             $.getJSON(query,drawTagcloud);
          });
@@ -35,11 +35,13 @@ if(isset($_GET['c'])) {
             <h1 id="pagetitle"><?print $person?></h1>
             <a href="timecloud.html">back to timecloud</a>
          </div>
-         <div id="sparkline" > </div>
+         <div id="timegraph" class="timegraph">
+            <div class="sparkline" > </div>
             <div class="dates">
-               <div class="enddate" id="enddate" ></div>
-               <div class="startdate" id="startdate" ></div>
+               <div class="enddate"></div>
+               <div class="startdate"></div>
             </div>
+         </div>
          <div id="tagcloud"></div>
       </div>
    </body>

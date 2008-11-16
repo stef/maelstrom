@@ -1,3 +1,12 @@
+<?php
+$timeconstraint;
+if(isset($_GET['start'])) {
+   $timeconstraint="&start=".$_GET['start'];
+}
+if(isset($_GET['end'])) {
+   $timeconstraint.="&end=".$_GET['end'];
+}
+?>
 <html>
    <head>
       <script src="jquery.js" type="text/javascript" charset="utf-8"></script>
@@ -17,9 +26,12 @@
          $(document).ready(function() {
             $("#pause").click(function () { togglePlay($(this)); });
             $("#step").click(function () { animate(); });
-            var query="mailyze.php?op=mailFrequency";
+            var query="mailyze.php?op=mailFrequency<?php print $timeconstraint;?>";
             $.getJSON(query,function(data) { drawSparkline(data,'#overviewGraph',sparklineStyle)});
-            var query="mailyze.php?op=contactTimeCloud";
+            var cend=toSliderScale(window_size);
+            $('#slide').slider({ handles: [{start: 0, id:'handle1'}, {start: cend, id:'handle2'}],
+                                 range: true, change: function(e,ui) { console.log(ui.range); } });
+            var query="mailyze.php?op=contactTimeCloud<?php print $timeconstraint;?>";
             $.getJSON(query,loadTimecloud);
          })
       </script>

@@ -19,5 +19,4 @@ a.tagcloud-later { color: #99f; }
 a.tagcloud-latest { color: #00f; }
 .ui-slider-handle { height:23px; background-color: #444; left:0; opacity:0.3; position:absolute; top:-1; width:1px; z-index:1; border: 1px solid white; }
 .ui-slider-range { background:#50A029 ; height:23px; opacity:0.3; position:absolute; width:100%; }
-.ui-slider { width: 800px; font-size: 12px; height:23px; position:relative; top: -25px; left: -2px; margin: -25px; }
-
+.ui-slider { width: 800px; font-size: 12px; height:23px; position:relative; top: -24px; margin-bottom: -24px; margin-top: -24px;}

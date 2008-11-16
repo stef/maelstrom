@@ -99,15 +99,6 @@ function initTags() {
    return [tags, sparkline];
 }
 
-function listToDict(lst) {
-   var tagcloud=[];
-   // convert tags into list for drawTagcloud
-   for ( tag in lst) {
-      tagcloud.push([tag, lst[tag].count, lst[tag].currentDate]);
-   }
-   return tagcloud;
-}
-
 function loadTimecloud(data) {
    var nextdate;
    for (id in data) {
@@ -127,9 +118,6 @@ function loadTimecloud(data) {
    // draw first frame
    [tags,sparkline]=initTags();
    drawSparkline(sparkline,'#zoomGraph',sparklineStyle);
-   var cend=toSliderScale(window_size);
-   $('#slide').slider({ handles: [{start: 0, id:'handle1'}, {start: cend, id:'handle2'}],
-         range: true, change: function(e,ui) { console.log(ui.range); } });
    drawTagcloud(listToDict(tags));
 }
 
