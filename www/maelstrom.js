@@ -15,17 +15,6 @@ function toSliderScale(num) {
    return (num/contactVolumes.length)*100;
 }
 
-function togglePlay(obj) {
-   if(play) {
-      play=false;
-      obj.val(">");
-   } else {
-      play=true;
-      obj.val("||");
-      animate();
-   }
-}
-
 function dateToStr(date) {
    var d  = date.getDate();
    var day = (d < 10) ? '0' + d : d;

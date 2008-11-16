@@ -7,6 +7,11 @@
       <script type="text/javascript" src="tagcloud.js"></script>
       <script type="text/javascript" src="maelstrom.js"></script>
       <script type="text/javascript">
+         function togglePlay(obj) {
+            if(play) { play=false; obj.val(">");
+            } else { play=true; obj.val("||"); animate(); }
+         }
+
          $(document).ready(function() {
             $("#pause").click(function () { togglePlay($(this)); });
             $("#step").click(function () { animate(); });
@@ -20,27 +25,21 @@
       <link href="style.css" rel="stylesheet" type="text/css" />
    </head>
    <body>
-      <div style="width: 900px; margin-left: auto ; margin-right: auto ;">
+      <div id="content">
          <h1>TimeCloud</h1>
          <input type="submit" id="pause" value=">" />
          <input type="submit" id="step" value="+" />
          <div id="overview" > </div>
-         <div id="slide" class="ui-slider" style="width: 800px; font-size: 12px;">
+         <div id="slide" class="ui-slider">
            <div id="handle1" class="ui-slider-handle"></div>
            <div id="handle2" class="ui-slider-handle"></div>
          </div>
          <div id="sparkline" > </div>
-         <div style="width: 800px; font-size: 12px; margin: 0px 0px 30px;">
-            <span style="float: left;" id="startdate" ></span>
-            <span style="float: right;" id="enddate" ></span>
+         <div id="dates">
+            <span id="startdate" id="startdate" ></span>
+            <span id="enddate" id="enddate" ></span>
          </div>
          <div id="tagcloud"></div>
-         <!--
-         <h2>Settings</h2>
-         <input type="text" id="altInline" size="10"/> 
-         <div id="inline"></div> 
-         <input type="text" id="interval" value="Select the length of the interval" style="width:300px;"/>
-         <input type="text" id="steps" value="Granularity of animation" style="width:300px;"/>-->
       </div>
    </body>
 </html>
