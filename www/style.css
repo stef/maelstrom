@@ -1,7 +1,7 @@
 * { margin:  0; padding: 0; font-family: "Trebuchet MS", sans-serif }
-div#tagcloud { width: 500px; }
-#sparkline { padding: 2px 2px 0px; margin: 10px 10px 2px; }
-ul.tagcloud-list { font-size: 100%; font-weight: bold; padding: 2px; margin: 10px; }
+div#tagcloud { width: 800px; }
+#sparkline { padding: 2px 2px 0px;}
+ul.tagcloud-list { font-size: 100%; font-weight: bold; padding: 2px; }
 li.tagcloud-base { font-size: 24px; display: inline; white-space: nowrap; }
 a.tagcloud-anchor { text-decoration: none; }
 a.tagcloud-anchor:hover { background-color: #ddd; }
@@ -9,3 +9,6 @@ a.tagcloud-earliest { color: #ccc; }
 a.tagcloud-earlier { color: #99c; }
 a.tagcloud-later { color: #99f; }
 a.tagcloud-latest { color: #00f; }
+.ui-slider-handle { height:23px; background-color: #444; left:0; opacity:0.3; position:absolute; top:-1; width:1px; z-index:1; border: 1px solid white; }
+.ui-slider-range { background:#50A029 ; height:23px; opacity:0.3; position:absolute; width:100%; }
+.ui-slider { height:23px; position:relative; top: -25px; width:500px; }

@@ -2,6 +2,8 @@
    <head>
       <script src="jquery.js" type="text/javascript" charset="utf-8"></script>
       <script src="jquery.sparkline.js" type="text/javascript" charset="utf-8"></script>
+      <script type="text/javascript" src="ui.core.js"></script>
+      <script type="text/javascript" src="ui.slider.js"></script>
       <script type="text/javascript" src="tagcloud.js"></script>
       <script type="text/javascript" src="maelstrom.js"></script>
       <script type="text/javascript">
@@ -10,7 +12,7 @@
             $("#step").click(function () { animate(); });
             var timeConstraint="&start="+dateToStr(start)+"&end="+dateToStr(end);
             var query="mailyze.php?op=mailFrequency"+timeConstraint;
-            $.getJSON(query,loadSparkline);
+            $.getJSON(query,function(data) { loadSparkline(data,'#overview')});
             var query="mailyze.php?op=contactTimeCloud"+timeConstraint;
             $.getJSON(query,loadTimecloud);
          })
@@ -18,20 +20,27 @@
       <link href="style.css" rel="stylesheet" type="text/css" />
    </head>
    <body>
-      <h1>TimeCloud</h1>
-      <input type="submit" id="pause" value=">" />
-      <input type="submit" id="step" value="+" />
-      <div id="sparkline" > </div>
-      <div style="width: 480px; font-size: 12px; margin: 0px 10px 30px;">
-         <span style="float: left;" id="startdate" ></span>
-         <span style="float: right;" id="enddate" ></span>
+      <div style="width: 900px; margin-left: auto ; margin-right: auto ;">
+         <h1>TimeCloud</h1>
+         <input type="submit" id="pause" value=">" />
+         <input type="submit" id="step" value="+" />
+         <div id="overview" > </div>
+         <div id="slide" class="ui-slider" style="width: 800px; font-size: 12px;">
+           <div id="handle1" class="ui-slider-handle"></div>
+           <div id="handle2" class="ui-slider-handle"></div>
+         </div>
+         <div id="sparkline" > </div>
+         <div style="width: 800px; font-size: 12px; margin: 0px 0px 30px;">
+            <span style="float: left;" id="startdate" ></span>
+            <span style="float: right;" id="enddate" ></span>
+         </div>
+         <div id="tagcloud"></div>
+         <!--
+         <h2>Settings</h2>
+         <input type="text" id="altInline" size="10"/> 
+         <div id="inline"></div> 
+         <input type="text" id="interval" value="Select the length of the interval" style="width:300px;"/>
+         <input type="text" id="steps" value="Granularity of animation" style="width:300px;"/>-->
       </div>
-      <div id="tagcloud"></div>
-      <!--
-      <h2>Settings</h2>
-      <input type="text" id="altInline" size="10"/> 
-      <div id="inline"></div> 
-      <input type="text" id="interval" value="Select the length of the interval" style="width:300px;"/>
-      <input type="text" id="steps" value="Granularity of animation" style="width:300px;"/>-->
    </body>
 </html>

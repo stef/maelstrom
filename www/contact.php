@@ -17,7 +17,7 @@ if(isset($_GET['c'])) {
          $(document).ready(function() {
             var params="&c=<?php print urlencode($person)?>";
             var query="mailyze.php?op=contactMails"+params;
-            $.getJSON(query,loadSparkline);
+            $.getJSON(query,function(data) { loadSparkline(data,'#sparkline')});
             var query="mailyze.php?op=secondContacts"+params;
             $.getJSON(query,drawTagcloud);
          });
