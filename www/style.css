@@ -1,13 +1,17 @@
 * { margin:  0; padding: 0; font-family: "Trebuchet MS", sans-serif }
 #content {width: 900px; margin-left: auto ; margin-right: auto ;}
-#tagcloud { width: 800px; }
-#sparkline { padding: 2px 2px 0px;}
-#dates { width: 800px; font-size: 12px; margin: 0px 0px 30px; }
-#stardate {float: left;}
-#enddate {float: right;}
+#header {width: 800px; margin-left: auto ; margin-right: auto ;}
+#overview { width: 800px; padding: 2px 2px 0px; margin-left: auto; margin-right: auto; }
+#slide { width: 800px; margin-left: auto; margin-right: auto; }
+#sparkline { width: 800px; padding: 2px 2px 0px; margin-left: auto; margin-right: auto; }
+.timegraph { width: 800px; font-size: 12px; margin: 0px 0px 10px; margin-left: auto; margin-right: auto; }
+.dates { width: 800px; font-size: 12px; margin: 0px 0px 10px; margin-left: auto; margin-right: auto; }
+.stardate {float: left;}
+.enddate {float: right;}
+#tagcloud { width: 800px; margin-left: auto; margin-right: auto; }
 ul.tagcloud-list { font-size: 100%; font-weight: bold; padding: 2px; }
 li.tagcloud-base { font-size: 24px; display: inline; white-space: nowrap; }
-a.tagcloud-anchor { text-decoration: none; }
+a.tagcloud-anchor { text-decoration: none; color: #00f;}
 a.tagcloud-anchor:hover { background-color: #ddd; }
 a.tagcloud-earliest { color: #ccc; }
 a.tagcloud-earlier { color: #99c; }
@@ -15,5 +19,5 @@ a.tagcloud-later { color: #99f; }
 a.tagcloud-latest { color: #00f; }
 .ui-slider-handle { height:23px; background-color: #444; left:0; opacity:0.3; position:absolute; top:-1; width:1px; z-index:1; border: 1px solid white; }
 .ui-slider-range { background:#50A029 ; height:23px; opacity:0.3; position:absolute; width:100%; }
-.ui-slider { width: 800px; font-size: 12px; height:23px; position:relative; top: -25px; }
+.ui-slider { width: 800px; font-size: 12px; height:23px; position:relative; top: -25px; left: -2px; margin: -25px; }
 

@@ -35,7 +35,7 @@ function contactMails($db) {
    // TODO add window handling if needed
 
    foreach ($db->query($q) as $row) {
-      $results[]=array('delivered' => $row['delivered'],
+      $results[]=array('date' => $row['delivered'],
                        'count' => $row['count']);
    }
    return ($results);
@@ -64,7 +64,7 @@ function secondContacts($db) {
    //date(message.delivered)<'$end'";
    $q="select person.fullname as contact,
               count(person.id) as count,
-              max(date(message.delivered)) as lastseen
+              max(date(message.delivered)) as date
          from message, role, email, person
          where message.id in (select message.id 
                              from message, role, email, person 
@@ -94,7 +94,7 @@ function mailTimeFrame($db) {
 }
 
 function contactTimeCloud($db) {
-   list($start, $time)=mailTimeFrame($db);
+   list($start, $end)=mailTimeFrame($db);
    global $MAILBOXOWNER;
 
    if(isset($_GET['start'])) {
@@ -148,7 +148,7 @@ function contactTimeCloud($db) {
 }
 
 function mailFrequency($db) {
-   list($start, $time)=mailTimeFrame($db);
+   list($start, $end)=mailTimeFrame($db);
 
    if(isset($_GET['start'])) {
       $start=$_GET['start'];
@@ -167,7 +167,7 @@ function mailFrequency($db) {
 
    foreach ($db->query($q) as $row) {
       $results[]=array('count' => $row['count'],
-                       'delivered' => $row['delivered']);
+                       'date' => $row['delivered']);
    }
    return ($results);
 }

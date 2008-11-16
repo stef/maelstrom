@@ -6,7 +6,9 @@
       <script type="text/javascript" src="ui.slider.js"></script>
       <script type="text/javascript" src="tagcloud.js"></script>
       <script type="text/javascript" src="maelstrom.js"></script>
+      <script type="text/javascript" src="timecloud.js"></script>
       <script type="text/javascript">
+         var play=0;
          function togglePlay(obj) {
             if(play) { play=false; obj.val(">");
             } else { play=true; obj.val("||"); animate(); }
@@ -15,10 +17,9 @@
          $(document).ready(function() {
             $("#pause").click(function () { togglePlay($(this)); });
             $("#step").click(function () { animate(); });
-            var timeConstraint="&start="+dateToStr(start)+"&end="+dateToStr(end);
-            var query="mailyze.php?op=mailFrequency"+timeConstraint;
-            $.getJSON(query,function(data) { drawSparkline(data,'#overview')});
-            var query="mailyze.php?op=contactTimeCloud"+timeConstraint;
+            var query="mailyze.php?op=mailFrequency";
+            $.getJSON(query,function(data) { drawSparkline(data,'#overviewGraph',sparklineStyle)});
+            var query="mailyze.php?op=contactTimeCloud";
             $.getJSON(query,loadTimecloud);
          })
       </script>
@@ -26,18 +27,28 @@
    </head>
    <body>
       <div id="content">
-         <h1>TimeCloud</h1>
-         <input type="submit" id="pause" value=">" />
-         <input type="submit" id="step" value="+" />
-         <div id="overview" > </div>
-         <div id="slide" class="ui-slider">
-           <div id="handle1" class="ui-slider-handle"></div>
-           <div id="handle2" class="ui-slider-handle"></div>
+         <div id="header">
+            <h1>TimeCloud</h1>
+            <input type="submit" id="pause" value=">" />
+            <input type="submit" id="step" value="+" />
          </div>
-         <div id="sparkline" > </div>
-         <div id="dates">
-            <span id="startdate" id="startdate" ></span>
-            <span id="enddate" id="enddate" ></span>
+         <div id="overviewGraph" class="timegraph">
+            <div class="sparkline" > </div>
+            <div class="dates">
+               <span class="enddate" ></span>
+               <span class="startdate"></span>
+            </div>
+            <div id="slide" class="ui-slider">
+              <div id="handle1" class="ui-slider-handle"></div>
+              <div id="handle2" class="ui-slider-handle"></div>
+            </div>
+         </div>
+         <div id="zoomGraph" class="timegraph">
+            <div class="sparkline" > </div>
+            <div class="dates">
+               <div class="enddate"></div>
+               <div class="startdate"></div>
+            </div>
          </div>
          <div id="tagcloud"></div>
       </div>
