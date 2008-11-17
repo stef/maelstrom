@@ -1,5 +1,5 @@
 <?php
-$timeconstraint;
+$timeconstraint='';
 if(isset($_GET['start'])) {
    $timeconstraint="&start=".$_GET['start'];
 }
