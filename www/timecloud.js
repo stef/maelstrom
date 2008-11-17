@@ -7,10 +7,11 @@ var frames=[];
 var oneday=24*60*60*1000;
 var tags=[];
 var sparkline=[];
-var sparklineStyle={ type:'line', lineColor:'Navy', spotColor:'red', height:'30px', width:'800px' };
+var sparklineStyle={ type:'line', lineColor:'Navy', height:'30px', width:'800px' };
 
-function toSliderScale(num) {
-   return (num/frames.length)*100;
+function togglePlay(obj) {
+   if(play) { play=false; return(">"); }
+   else { play=true; animate(); return("||");}
 }
 
 function listToDict(lst) {
@@ -42,7 +43,7 @@ function drawSparkline(data,target,style) {
    $(target+' .sparkline').sparkline(lst, style);
 }
 
-function drawTagcloud(data) {
+function drawTagcloud(data,target) {
    var tc;
    tc=TagCloud.create();
    for (id in data) {
@@ -61,18 +62,19 @@ function drawTagcloud(data) {
    }
    tc.loadEffector('CountSize').base(24).range(12);
    tc.loadEffector('DateTimeColor');
-   tc.setup('tagcloud');
+   tc.runEffectors();
+   $(target+" .tagcloud").empty().append(tc.toElement());
 }
 
 // calculate a list of tags by summing all corresponding tags in timetags from
 // (cstart,cstart+window_size[
 // result is a dict of { tags : counts } 
 function initTags() {
-   var i=0;
+   var i=cstart;
    var tags=[];
    var sparkline=[];
    // iterate over window_size
-   while(i<window_size) {
+   while(i<cstart+window_size) {
       // fetch current day
       var curday=frames[i];
       var currentDate=curday[0];
@@ -99,8 +101,20 @@ function initTags() {
    return [tags, sparkline];
 }
 
-function loadTimecloud(data) {
-   var nextdate;
+function changeScale(e,ui) {
+   console.log($('.ui-slider').slider('value', 0)+" "+$('.ui-slider').slider('value', 1));
+   console.log(frames[$('.ui-slider').slider('value', 0)][0]+" "+frames[$('.ui-slider').slider('value', 1)][0]);
+
+   cstart=$('.ui-slider').slider('value', 0);
+   window_size=Math.round(ui.range);
+   [tags,sparkline]=initTags();
+   drawSparkline(sparkline,widgetRoot,sparklineStyle);
+   drawTagcloud(listToDict(tags),widgetRoot);
+}
+
+function loadTimecloud(data,target) {
+   var nextdate=strToDate(data[0][0]);
+   widgetRoot=target;
    for (id in data) {
       // data received can be sparse, we fill any missing timesegments with
       // empty data 
@@ -109,7 +123,7 @@ function loadTimecloud(data) {
          frames.push([dateToStr(nextdate),[]]);
          nextdate=addDay(nextdate,1);
       }
-      nextdate=curdate;
+      nextdate=addDay(nextdate,1);
 
       // push non-sparse data
       frames.push([data[id][0],data[id][1]]);
@@ -117,9 +131,18 @@ function loadTimecloud(data) {
 
    // draw first frame
    [tags,sparkline]=initTags();
-   drawSparkline(sparkline,'#zoomGraph',sparklineStyle);
-   drawTagcloud(listToDict(tags));
+   drawSparkline(sparkline,widgetRoot,sparklineStyle);
+   $('.ui-slider').slider({ handles: [{start: 0 }, {start:window_size }],
+                            min: 0,
+                            max: frames.length,
+                            range: true,
+                            change: changeScale });
+   drawTagcloud(listToDict(tags),widgetRoot);
+   if(play) { 
+      setTimeout("animate()", timeout); 
+   }
 }
+
 
 function animate() {
    var totalFrames=frames.length;
@@ -163,12 +186,12 @@ function animate() {
       }
       // advance cstart with steps
       cstart+=steps;
-      $('#slide').slider("moveTo", toSliderScale(cstart), 0)
-      $('#slide').slider("moveTo", toSliderScale(cstart+window_size), 1)
-      drawSparkline(sparkline,'#zoomGraph',sparklineStyle);
+      drawSparkline(sparkline,widgetRoot,sparklineStyle);
+      $('.ui-slider').slider("moveTo", parseInt(cstart), 0, true);
+      $('.ui-slider').slider("moveTo", parseInt(cstart+window_size), 1, true);
 
       // draw tagcloud (current frame)
-      drawTagcloud(listToDict(tags));
+      drawTagcloud(listToDict(tags),widgetRoot);
    }
    if(play) { 
       setTimeout("animate()", timeout); 

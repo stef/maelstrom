@@ -20,7 +20,7 @@ if(isset($_GET['c'])) {
             var query="mailyze.php?op=contactMails"+params;
             $.getJSON(query,function(data) { drawSparkline(data,'#timegraph',sparklineStyle)});
             var query="mailyze.php?op=secondContacts"+params;
-            $.getJSON(query,drawTagcloud);
+            $.getJSON(query, function(data) { drawTagcloud(data,'#content')} );
          });
       </script>
       <link href="style.css" rel="stylesheet" type="text/css" />
@@ -42,7 +42,7 @@ if(isset($_GET['c'])) {
                <div class="startdate"></div>
             </div>
          </div>
-         <div id="tagcloud"></div>
+         <div class="tagcloud"></div>
       </div>
    </body>
 </html>
