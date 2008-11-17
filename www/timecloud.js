@@ -8,10 +8,31 @@ var oneday=24*60*60*1000;
 var tags=[];
 var sparkline=[];
 var sparklineStyle={ type:'line', lineColor:'Navy', height:'30px', width:'800px' };
+var oneday=24*60*60*1000;
 
 function togglePlay(obj) {
    if(play) { play=false; return(">"); }
    else { play=true; animate(); return("||");}
+}
+
+
+function dateToStr(date) {
+   var d  = date.getDate();
+   var day = (d < 10) ? '0' + d : d;
+   var m = date.getMonth() + 1;
+   var month = (m < 10) ? '0' + m : m;
+   var yy = date.getYear();
+   var year = (yy < 1000) ? yy + 1900 : yy;
+   return(year + "-" + month + "-" + day);
+}
+
+function strToDate(string) {
+   var frgs=string.split("-");
+   return(new Date(frgs[0],frgs[1]-1,frgs[2]));
+}
+
+function addDay(d,n) {
+   return new Date(d.getTime() + n*oneday);
 }
 
 function listToDict(lst) {
@@ -142,7 +163,6 @@ function loadTimecloud(data,target) {
       setTimeout("animate()", timeout); 
    }
 }
-
 
 function animate() {
    var totalFrames=frames.length;

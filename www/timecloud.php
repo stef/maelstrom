@@ -14,7 +14,6 @@ if(isset($_GET['end'])) {
       <script type="text/javascript" src="ui.core.js"></script>
       <script type="text/javascript" src="ui.slider.js"></script>
       <script type="text/javascript" src="tagcloud.js"></script>
-      <script type="text/javascript" src="maelstrom.js"></script>
       <script type="text/javascript" src="timecloud.js"></script>
       <script type="text/javascript">
          $(document).ready(function() {

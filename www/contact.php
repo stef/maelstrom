@@ -9,7 +9,6 @@ if(isset($_GET['c'])) {
 ?>
    <html>
    <head>
-      <script type="text/javascript" src="maelstrom.js"></script>
       <script type="text/javascript" src="timecloud.js"></script>
       <script src="jquery.js" type="text/javascript" charset="utf-8"></script>
       <script src="jquery.sparkline.js" type="text/javascript" charset="utf-8"></script>
