@@ -12,6 +12,7 @@ if(isset($_GET['end'])) {
       <script src="jquery.js" type="text/javascript" charset="utf-8"></script>
       <script src="jquery.sparkline.js" type="text/javascript" charset="utf-8"></script>
       <script type="text/javascript" src="ui.core.js"></script>
+      <script type="text/javascript" src="ui.draggable.js"></script>
       <script type="text/javascript" src="ui.slider.js"></script>
       <script type="text/javascript" src="tagcloud.js"></script>
       <script type="text/javascript" src="timecloud.js"></script>

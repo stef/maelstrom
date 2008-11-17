@@ -123,11 +123,21 @@ function initTags() {
 }
 
 function changeScale(e,ui) {
-   console.log($('.ui-slider').slider('value', 0)+" "+$('.ui-slider').slider('value', 1));
-   console.log(frames[$('.ui-slider').slider('value', 0)][0]+" "+frames[$('.ui-slider').slider('value', 1)][0]);
-
+   //console.log($('.ui-slider').slider('value', 0)+" "+$('.ui-slider').slider('value', 1));
+   //console.log(frames[$('.ui-slider').slider('value', 0)][0]+" "+frames[$('.ui-slider').slider('value', 1)][0]);
    cstart=$('.ui-slider').slider('value', 0);
    window_size=Math.round(ui.range);
+   [tags,sparkline]=initTags();
+   drawSparkline(sparkline,widgetRoot,sparklineStyle);
+   drawTagcloud(listToDict(tags),widgetRoot);
+}
+
+function moveWindow(e, ui) {
+   newstart=Math.round((frames.length*ui.position.left)/804);
+   //console.log(newstart);
+   $('.ui-slider').slider("moveTo", newstart+window_size-1, 1, true);
+   $('.ui-slider').slider("moveTo", newstart, 0, true);
+   cstart=newstart;
    [tags,sparkline]=initTags();
    drawSparkline(sparkline,widgetRoot,sparklineStyle);
    drawTagcloud(listToDict(tags),widgetRoot);
@@ -158,6 +168,10 @@ function loadTimecloud(data,target) {
                             max: frames.length,
                             range: true,
                             change: changeScale });
+   $(".ui-slider-range").draggable({ axis: 'x',
+                                     containment: '.ui-slider',
+                                     helper: 'clone',
+                                     stop: moveWindow}); 
    drawTagcloud(listToDict(tags),widgetRoot);
    if(play) { 
       setTimeout("animate()", timeout); 
@@ -208,7 +222,7 @@ function animate() {
       cstart+=steps;
       drawSparkline(sparkline,widgetRoot,sparklineStyle);
       $('.ui-slider').slider("moveTo", parseInt(cstart), 0, true);
-      $('.ui-slider').slider("moveTo", parseInt(cstart+window_size), 1, true);
+      $('.ui-slider').slider("moveTo", parseInt(cstart+window_size-1), 1, true);
 
       // draw tagcloud (current frame)
       drawTagcloud(listToDict(tags),widgetRoot);
