@@ -1,5 +1,5 @@
 <?php
-include_once("mailyze.php");
+include_once("maelstrom.php");
 
 if(isset($_GET['c'])) {
    $person=$_GET['c'];
@@ -7,41 +7,33 @@ if(isset($_GET['c'])) {
    $person=$MAILBOXOWNER;
 }
 ?>
-   <html>
+<html>
    <head>
-      <script type="text/javascript" src="timecloud.js"></script>
-      <script src="jquery.js" type="text/javascript" charset="utf-8"></script>
-      <script src="jquery.sparkline.js" type="text/javascript" charset="utf-8"></script>
-      <script type="text/javascript" src="tagcloud.js"></script>
+      <script type="text/javascript" charset="utf-8" src="jquery.js"></script>
+      <script type="text/javascript" charset="utf-8" src="jquery.sparkline.js" ></script>
+      <script type="text/javascript" charset="utf-8" src="ui.core.js"></script>
+      <script type="text/javascript" charset="utf-8" src="ui.draggable.js"></script>
+      <script type="text/javascript" charset="utf-8" src="ui.slider.js"></script>
+      <script type="text/javascript" charset="utf-8" src="tagcloud.js"></script>
+      <script type="text/javascript" charset="utf-8" src="timecloud.js"></script>
       <script type="text/javascript">
          $(document).ready(function() {
             var params="&c=<?php print urlencode($person)?>";
-            var query="mailyze.php?op=contactMails"+params;
-            $.getJSON(query,function(data) { drawSparkline(data,'#timegraph',sparklineStyle)});
-            var query="mailyze.php?op=secondContacts"+params;
-            $.getJSON(query, function(data) { drawTagcloud(data,'#content')} );
-         });
+            var query="maelstrom.php?op=secondContacts"+params;
+            $.getJSON(query,function(data) { $('#timecloud').timecloud({'timecloud':data})});
+         })
       </script>
       <link href="style.css" rel="stylesheet" type="text/css" />
    </head>
    <body>
-      <!-- mikor leveleztem vele/mennyit sparkline over all time
-      kik a kozos kontaktok? tagcloud
-      subjects - simile -->
-
       <div id="content">
          <div id="header">
             <h1 id="pagetitle"><?print $person?></h1>
-            <a href="timecloud.html">back to timecloud</a>
+            <a href="contacts.html">back to contacts</a>
          </div>
-         <div id="timegraph" class="timegraph">
-            <div class="sparkline" > </div>
-            <div class="dates">
-               <div class="enddate"></div>
-               <div class="startdate"></div>
-            </div>
+
+            <div id="timecloud" />
          </div>
-         <div class="tagcloud"></div>
       </div>
    </body>
 </html>

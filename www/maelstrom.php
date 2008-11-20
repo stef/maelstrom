@@ -64,7 +64,7 @@ function secondContacts($db) {
    //date(message.delivered)<'$end'";
    $q="select person.fullname as contact,
               count(person.id) as count,
-              max(date(message.delivered)) as date
+              date(message.delivered) as date
          from message, role, email, person
          where message.id in (select message.id 
                              from message, role, email, person 
@@ -75,10 +75,39 @@ function secondContacts($db) {
               message.id==role.msg_id and
               role.email_id==email.id and
               email.owner_id==person.id and 
+              person.fullname!='$MAILBOXOWNER' and
               person.fullname not like '$person'
-         group by contact;";
+         group by contact
+         order by date;";
+   $results=array();
+   $curdate="00-00-00";
    foreach ($db->query($q) as $row) {
-      $results[]=array($row['contact'],$row['count'],$row['lastseen']);
+      //$results[]=array($row['contact'],$row['count'],$row['date']);
+      //print_r($row);
+      //print "<br>";
+      $date=$row['date'];
+      if($date>$curdate) {
+         // row is a new day
+         if(isset($res)) {
+            // store the list of contact volumes in result vector
+            $results[]=array($curdate, $res);
+         }
+         // create a new list of contact volumes
+         $res=array(array($row['contact'], $row['count']));
+         // set curdate to the currently created new day
+         $curdate=$date;
+      } elseif($date==$curdate) {
+         // store the contact in the current days volume list
+         $res[]=array($row['contact'], $row['count']);
+      } else {
+         print "curdate $curdate";
+         print "date $date";
+         print_r($row);
+      }
+   }
+   // append the last day
+   if($res) {
+      $results[]=array($curdate, $res);
    }
    return ($results);
 }
@@ -141,6 +170,7 @@ function contactTimeCloud($db) {
          print_r($row);
       }
    }
+   // append the last day
    if($res) {
       $results[]=array($curdate, $res);
    }

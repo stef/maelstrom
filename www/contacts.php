@@ -18,7 +18,7 @@ if(isset($_GET['end'])) {
       <script type="text/javascript" charset="utf-8" src="timecloud.js"></script>
       <script type="text/javascript">
          $(document).ready(function() {
-            var query="mailyze.php?op=contactTimeCloud<?php print $timeconstraint;?>";
+            var query="maelstrom.php?op=contactTimeCloud<?php print $timeconstraint;?>";
             $.getJSON(query,function(data) { $('#timecloud').timecloud({'timecloud':data})});
          })
       </script>
