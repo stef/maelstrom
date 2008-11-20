@@ -29,7 +29,7 @@ if(isset($_GET['c'])) {
       <div id="content">
          <div id="header">
             <h1 id="pagetitle"><?print $person?></h1>
-            <a href="contacts.html">back to contacts</a>
+            <a href="contacts.php">back to contacts</a>
          </div>
 
             <div id="timecloud" />
