@@ -62,21 +62,17 @@ if($_GET['op']=="timecloud" or $_GET['op']=="volume") {
 } else print '
 <html>
    <head>
-      <script src="jquery.js" type="text/javascript" charset="utf-8"></script>
-      <script src="jquery.sparkline.js" type="text/javascript" charset="utf-8"></script>
-      <script type="text/javascript" src="ui.core.js"></script>
-      <script type="text/javascript" src="ui.draggable.js"></script>
-      <script type="text/javascript" src="ui.slider.js"></script>
-      <script type="text/javascript" src="tagcloud.js"></script>
-      <script type="text/javascript" src="timecloud.js"></script>
+      <script type="text/javascript" charset="utf-8" src="jquery.js"></script>
+      <script type="text/javascript" charset="utf-8" src="jquery.sparkline.js" ></script>
+      <script type="text/javascript" charset="utf-8" src="ui.core.js"></script>
+      <script type="text/javascript" charset="utf-8" src="ui.draggable.js"></script>
+      <script type="text/javascript" charset="utf-8" src="ui.slider.js"></script>
+      <script type="text/javascript" charset="utf-8" src="tagcloud.js"></script>
+      <script type="text/javascript" charset="utf-8" src="timecloud.js"></script>
       <script type="text/javascript">
          $(document).ready(function() {
-            $("#pause").click(function () { $(this).val(togglePlay()); });
-            $("#step").click(function () { animate(); });
-            var query="delicious.php?op=volume'.$timeconstraint.'";
-            $.getJSON(query,function(data) { drawSparkline(data,"#overviewGraph",sparklineStyle)});
             var query="delicious.php?op=timecloud'.$timeconstraint.'";
-            $.getJSON(query,function(data) { loadTimecloud(data,"#timecloud")});
+            $.getJSON(query,function(data) { $("#loading").hide(); $("#timecloud").timecloud({"timecloud":data}); });
          })
       </script>
       <link href="style.css" rel="stylesheet" type="text/css" />
@@ -85,29 +81,8 @@ if($_GET['op']=="timecloud" or $_GET['op']=="volume") {
       <div id="content">
          <div id="header">
             <h1>TimeCloud</h1>
-            <input type="submit" id="pause" value=">" />
-            <input type="submit" id="step" value="+" />
-         </div>
-         <div id="overviewGraph" class="timegraph">
-            <div class="sparkline" > </div>
-            <div class="dates">
-               <span class="enddate" ></span>
-               <span class="startdate"></span>
-            </div>
-            <div class="ui-slider">
-              <div class="ui-slider-handle left"></div>
-              <div class="ui-slider-handle right"></div>
-            </div>
-         </div>
-         <div id="timecloud">
-            <div class="timegraph">
-               <div class="sparkline" > </div>
-               <div class="dates">
-                  <div class="enddate"></div>
-                  <div class="startdate"></div>
-               </div>
-            </div>
-            <div class="tagcloud"></div>
+            <div id="timecloud" /> 
+            <div id="loading" style="height: 100px; background: transparent url(spinner.gif) no-repeat scroll center center; text-align: center;"><span>Loading...</span></div>
          </div>
       </div>
    </body>
