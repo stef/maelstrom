@@ -1,7 +1,7 @@
 <?php
 
 $MAILBOXOWNER="Marsiske Stefan";
-$dburl='sqlite:'.$_SERVER['DOCUMENT_ROOT'].'/mailyze/db/messages.db';
+$dburl='sqlite:'.$_SERVER['DOCUMENT_ROOT'].'/maelstrom/db/messages.db';
 
 // get all mails from person
 

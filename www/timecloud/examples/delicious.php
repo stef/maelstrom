@@ -8,8 +8,6 @@ if(isset($_GET['end'])) {
 }
 
 if($_GET['op']=="timecloud" or $_GET['op']=="volume") { 
-   //header("Content-type: text/plain");
-   //print json_encode(contactTimeCloud($db));
    require('phpdelicious/php-delicious.inc.php');
    require('deliciouslogin.inc.php');
 
@@ -62,20 +60,20 @@ if($_GET['op']=="timecloud" or $_GET['op']=="volume") {
 } else print '
 <html>
    <head>
-      <script type="text/javascript" charset="utf-8" src="jquery.js"></script>
-      <script type="text/javascript" charset="utf-8" src="jquery.sparkline.js" ></script>
-      <script type="text/javascript" charset="utf-8" src="ui.core.js"></script>
-      <script type="text/javascript" charset="utf-8" src="ui.draggable.js"></script>
-      <script type="text/javascript" charset="utf-8" src="ui.slider.js"></script>
-      <script type="text/javascript" charset="utf-8" src="tagcloud.js"></script>
-      <script type="text/javascript" charset="utf-8" src="timecloud.js"></script>
+      <script type="text/javascript" charset="utf-8" src="../include/jquery.js"></script>
+      <script type="text/javascript" charset="utf-8" src="../include/jquery.sparkline.js" ></script>
+      <script type="text/javascript" charset="utf-8" src="../include/ui.core.js"></script>
+      <script type="text/javascript" charset="utf-8" src="../include/ui.draggable.js"></script>
+      <script type="text/javascript" charset="utf-8" src="../include/ui.slider.js"></script>
+      <script type="text/javascript" charset="utf-8" src="../include/tagcloud.js"></script>
+      <script type="text/javascript" charset="utf-8" src="../timecloud.js"></script>
       <script type="text/javascript">
          $(document).ready(function() {
             var query="delicious.php?op=timecloud'.$timeconstraint.'";
             $.getJSON(query,function(data) { $("#loading").hide(); $("#timecloud").timecloud({"timecloud":data}); });
          })
       </script>
-      <link href="style.css" rel="stylesheet" type="text/css" />
+      <link href="../style.css" rel="stylesheet" type="text/css" />
    </head>
    <body>
       <div id="content">
