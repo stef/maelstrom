@@ -1,0 +1,14 @@
+/* Maelstrom - visualizing email contacts
+   Copyright© 2008-2009 Stefan Marsiske <my name at gmail.com> */
+#log {
+	position:absolute;
+	top:0;
+	right:0;
+	font-weight: bold;
+	font-size: 1em;
+	margin: 0;
+	color: #9FD4FF;
+	padding: 8px 4px;
+	background-color:#222;
+	z-index:3000;
+}

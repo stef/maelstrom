@@ -1,0 +1,37 @@
+Maelstrom - visualizing email contacts
+
+Copyright© 2008-2009 Stefan Marsiske <my name at gmail.com>
+
+License
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Affero General Public License as
+ published by the Free Software Foundation, either version 3 of the
+ License, or (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Affero General Public License for more details.
+
+ You should have received a copy of the GNU Affero General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+Depends
+... on a lot of stuff, like:
+   * python, 
+   * php,
+   * javascript,
+   * sqlite3, 
+
+HOWTO
+ 0. Create a db/ directory in the root of the maelstrom distribution.
+ 1. Get utils/indexer.py to run on your mbox or cyrus mail files. This will
+ create a message.db sqlite database containing all information from the
+ headers of the mails parsed.
+ 2. Configure an apache/php stack to the stuff in the www directory.
+ 3. If the mails all belong to one person, you should set the MAILBOXOWNER
+ variable in www/maelstrom.php
+ 4. direct your browser to http://<wherever-you-configured-it>/contacts.php
+ or to http://<wherever-you-configured-it>/cnet.php
+
+have fun, s.

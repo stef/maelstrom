@@ -1,16 +1,15 @@
 /*
- * File: Hypertree.js
+ * File: Core.js
  * 
  * Author: Nicolas Garcia Belmonte
  * 
- * Homepage: <http://thejit.org>
- * 
- * Version: 1.0.7a
- *
- * Copyright: Copyright 2008 by Nicolas Garcia Belmonte.
+ * Copyright: Copyright 2008-2009 by Nicolas Garcia Belmonte.
  * 
  * License: BSD License
  * 
+ * Homepage: <http://thejit.org>
+ * 
+ * Version: 1.0.8a
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -42,7 +41,9 @@
    Provides some common utility functions.
 */
 var $_ = {
-	fn: function() { return function() {}; },
+	empty: function() {},
+	
+	fn: function(val) { return function() { return val; }; },
 
 	merge: function(){
 		var mix = {};
@@ -71,169 +72,359 @@ var $_ = {
 	},
 	
 	isArray: function(obj) {
-		return obj.constructor.toString().match(/array/i);
+		return obj && obj.constructor && obj.constructor.toString().match(/array/i);
 	},
 	
 	isString: function(obj) {
-		return obj.constructor.toString().match(/string/i);
+		return obj && obj.constructor && obj.constructor.toString().match(/string/i);
 	},
 	
 	isObject: function(obj) {
-		return obj.constructor.toString().match(/object/i);
+		return obj && obj.constructor && obj.constructor.toString().match(/object/i);
 	}
 } ;
+/*
+ * File: Canvas.js
+ * 
+ * Author: Nicolas Garcia Belmonte
+ * 
+ * Copyright: Copyright 2008-2009 by Nicolas Garcia Belmonte.
+ * 
+ * License: BSD License
+ * 
+ * Homepage: <http://thejit.org>
+ * 
+ * Version: 1.0.8a
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the organization nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY Nicolas Garcia Belmonte ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL Nicolas Garcia Belmonte BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 
+ */
+
 
 /*
    Class: Canvas
 
    A multi-purpose Canvas object decorator.
 */
-
-/*
-   Constructor: Canvas
-
-   Canvas initializer.
-
-   Parameters:
-
-      canvasId - The canvas tag id.
-      fillStyle - (optional) fill color style. Default's to white
-      strokeStyle - (optional) stroke color style. Default's to white
-
-   Returns:
-
-      A new Canvas instance.
-*/
-var Canvas= function (canvasId, fillStyle, strokeStyle) {
-	//browser supports canvas element
-		this.canvasId= canvasId;
-		//canvas element exists
-		if((this.canvas= document.getElementById(this.canvasId)) 
-			&& this.canvas.getContext) {
-		      this.ctx = this.canvas.getContext('2d');
-		      this.ctx.fillStyle = fillStyle || 'white';
-		      this.ctx.strokeStyle = strokeStyle || 'white';
-		      this.setPosition();
-		      this.translateToCenter();
-		} else {
-			throw "Canvas object could not initialize.";
-		}
+var Canvas = (function () {
+	var ctx, bkctx, mainContainer, labelContainer, canvas, bkcanvas;
+	var config = {
+		'injectInto': 'id',
+		
+		'width':200,
+		'height':200,
+		
+		'backgroundColor':'#333333',
+		
+		'styles': {
+			'fillStyle':'#000000',
+			'strokeStyle':'#000000'
+		},
+		
+		'backgroundCanvas': false
+	};
 	
-};
-
-Canvas.prototype= {
+	function hasCanvas() {
+		hasCanvas.t = hasCanvas.t || typeof(HTMLCanvasElement);
+		return "function" == hasCanvas.t || "object" == hasCanvas.t;
+	};
+	
+	function create(tag, prop, styles) {
+		var elem = document.createElement(tag);
+		(function(obj, prop) {
+			if(prop) for (var p in prop) obj[p] = prop[p];
+			return arguments.callee;
+		})(elem, prop)(elem.style, styles);
+		 //feature check
+		 if(tag == "canvas" && !hasCanvas() && G_vmlCanvasManager) {
+			elem = G_vmlCanvasManager.initElement(
+				document.body.appendChild(elem));
+		 }
+		 	
+		return elem;
+	};
+	
+	function get(id) {
+		return document.getElementById(id);
+	};
+	
+	function translateToCenter(canvas, ctx, w, h) {
+		var width = w? (w - canvas.width) : canvas.width;
+		var height = h? (h - canvas.height) : canvas.height;
+		ctx.translate(width / 2, height / 2);
+	};
+	
 	/*
-	   Method: getContext
+	   Constructor: Canvas
+	
+	   Canvas constructor.
+	
+	   Parameters:
+	
+	      id - The canvas tag id.
+	      opt - configuration object, possible parameters are:
+	      - *injectInto* id for the container of the canvas.
+	      Canvas object will be appended to the object specified by this id.
+	      - *width* canvas width, default's 200
+	      - *height* canvas height, default's 200
+	      - *backgroundColor* used for background color when clipping in IE
+	      - *styles* an object containing canvas style properties. See <https://developer.mozilla.org/en/Canvas_tutorial/Applying_styles_and_colors>
+		  - *backgroundCanvas* an object containing configuration properties for a background canvas.
+		  
+		  A possible configuration object could be defined as:
+		  (start code)
+			var config = {
+				'injectInto': 'id',
+				
+				'width':200,
+				'height':200,
+				
+				'backgroundColor':'#333333',
+				
+				'styles': {
+					'fillStyle':'#000000',
+					'strokeStyle':'#000000'
+				},
+				
+				'backgroundCanvas': false
+			};
+		  (end code)
+		  
+		  More information in <http://blog.thejit.org>.
 
 	   Returns:
 	
-	      Canvas context handler.
+	      A new Canvas instance.
 	*/
-	getContext: function () {
-		return this.ctx;
-	},
+	return function(id, opt) {
+		if(arguments.length < 1) throw "Arguments missing";
+		var idLabel = id + "-label", idCanvas = id + "-canvas", idBCanvas = id + "-bkcanvas";
+		opt = $_.merge(config, opt || {});
+		//create elements
+		var dim = { 'width': opt.width, 'height': opt.height };
+		mainContainer = create("div", { 'id': id }, $_.merge(dim, { 'position': 'relative' }));
+		labelContainer = create("div", { 'id': idLabel }, { 
+			'overflow': 'visible',
+			'position': 'absolute',
+			'top': 0,
+			'left': 0,
+			'width': dim.width + 'px',
+			'height': 0
+		});
+		var dimPos = {
+			'position': 'absolute',
+			'top': 0,
+			'left': 0,
+			'width': dim.width + 'px',
+			'height': dim.height + 'px'
+		};
+		canvas = create("canvas", $_.merge({ 'id': idCanvas }, dim), dimPos);
+		var bc = opt.backgroundCanvas;
+		if(bc) {
+			bkcanvas = create("canvas", $_.merge({ 'id': idBCanvas }, dim), dimPos);
+			//append elements
+			mainContainer.appendChild(bkcanvas);
+		}
+		mainContainer.appendChild(canvas);
+		mainContainer.appendChild(labelContainer);
+		get(opt.injectInto).appendChild(mainContainer);
+		
+		//create contexts
+		ctx = canvas.getContext('2d');
+		translateToCenter(canvas, ctx);
+		var st = opt.styles;
+		for(var s in st) ctx[s] = st[s];
+		if(bc) {
+			bkctx = bkcanvas.getContext('2d');
+			var st = bc.styles;
+			for(var s in st) bkctx[s] = st[s];
+			translateToCenter(bkcanvas, bkctx);
+			bc.impl.init(bkcanvas, bkctx);
+			bc.impl.plot(bkcanvas, bkctx);
+		}
+		//create methods
+		return {
+			'id': id,
+			/*
+			   Method: getCtx
+			
+			   Returns:
+			
+			      Main canvas context.
+			*/
+			getCtx: function() {
+				return ctx;
+			},
 
-	/*
-	   Method: setPosition
-	
-	   Calculates canvas absolute position on HTML document.
-	*/	
-	setPosition: function() {
-		var obj= this.canvas;
-		var curleft = curtop = 0;
-		if (obj.offsetParent) {
-			curleft = obj.offsetLeft
-			curtop = obj.offsetTop
-			while (obj = obj.offsetParent) {
-				curleft += obj.offsetLeft
-				curtop += obj.offsetTop
+			/*
+			   Method: getElement
+			
+			   Returns:
+			
+			      DOM canvas wrapper generated. More information
+			      about this can be found in the post <http://blog.thejit.org>
+			*/
+			getElement: function() {
+				return mainContainer;
+			},
+			
+			/*
+			   Method: resize
+			
+			   Resizes the canvas.
+			
+			   Parameters:
+			
+			      width - New canvas width.
+			      height - New canvas height.
+			
+			*/
+			resize: function(width, height) {
+				(function(canvas, ctx) {
+					translateToCenter(canvas, ctx, width, height);
+					canvas.width = width;
+					canvas.height = height;
+					return arguments.callee;
+				})(canvas, ctx)(bkcanvas, bkctx);
+			},
+			
+			/*
+			   Method: getSize
+			
+			   Returns canvas dimensions.
+			
+			   Returns:
+			
+			      An object with _width_ and _height_ properties.
+			*/
+			getSize: function() {
+				return { 'width': canvas.width, 'height': canvas.height };
+			},
+			
+			/*
+			   Method: path
+			   
+			  Performs a _beginPath_ executes _action_ doing then a _type_ ('fill' or 'stroke') and closing the path with closePath.
+			*/
+			path: function(type, action) {
+				ctx.beginPath();
+				action(ctx);
+				ctx[type]();
+				ctx.closePath();
+			},
+			
+			/*
+			   Method: clear
+			
+			   Clears the canvas object.
+			*/		
+			clear: function () {
+				var size = this.getSize();
+				ctx.clearRect(-size.width / 2, -size.height / 2, size.width, size.height);
+			},
+			
+			/*
+			   Method: clearReactangle
+			
+			   Same as <clear> but only clears a section of the canvas.
+			   
+			   Parameters:
+			   
+			   	top - An integer specifying the top of the rectangle.
+			   	right -  An integer specifying the right of the rectangle.
+			   	bottom - An integer specifying the bottom of the rectangle.
+			   	left - An integer specifying the left of the rectangle.
+			*/		
+			clearRectangle: function (top, right, bottom, left) {
+				//if using excanvas
+				if(!hasCanvas()) {
+					var f0 = ctx.fillStyle;
+					ctx.fillStyle = opt.backgroundColor;
+					ctx.fillRect(left, top, right - left, bottom - top);
+					ctx.fillStyle = f0;
+				} else {
+					//TODO absolutely arbitraty offsets!
+					ctx.clearRect(left, top -2, right - left +2, Math.abs(bottom - top) +5);
+				}
+			},
+			
+			/*
+			   Method: makeRect
+			
+			   Draws a rectangle in canvas.
+			
+			   Parameters:
+			
+			      mode - A String sepecifying if mode is "fill" or "stroke".
+			      pos - A set of two coordinates specifying top left and bottom right corners of the rectangle.
+			*/
+			makeRect: function(pos, mode) {
+				if(mode == "fill" || mode == "stroke") {
+					ctx[mode + "Rect"](pos.x1, pos.y1, pos.x2, pos.y2);
+				} else throw "parameter not recognized " + mode;
 			}
-		}
-		this.position= { x: curleft, y: curtop };
-	},
-
-	/*
-	   Method: getPosition
-
-	   Returns:
+			
+		};
+	};
 	
-	      Canvas absolute position to the HTML document.
-	*/
-	getPosition: function() {
-		return this.position;
-	},
-
-	/*
-	   Method: clear
-	
-	   Clears the canvas object.
-	*/		
-	clear: function () {
-		var size = this.getSize();
-		this.ctx.clearRect(-size.x / 2, -size.y / 2, size.x, size.y);
-	},
-
-	/*
-	   Method: drawMainCircle
-	
-	   Draws the boundary circle for the Hyperbolic Tree.
-	*/	
-	drawMainCircle: function () {	
-	  var ctx= this.ctx;
-	  ctx.beginPath();
-	  	ctx.arc(0, 0, this.getSmallerSize() / 2, 0, Math.PI*2, true);
-	  	ctx.stroke();
- 		ctx.closePath();
-	},
-	
-	/*
-	   Method: translateToCenter
-	
-	   Translates canvas coordinates system to the center of the canvas object.
-	*/
-	translateToCenter: function() {
-		this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
-	},
-	
-
-	/*
-	   Method: getSize
-
-	   Returns:
-	
-	      An object that contains the canvas width and height.
-	      i.e. { x: canvasWidth, y: canvasHeight }
-	*/
-	getSize: function () {
-		var width = this.canvas.width;
-		var height = this.canvas.height;
-		return { x: width, y: height };
-	},
-
-	/*
-	   Method: path
-	   
-	  Performs a _beginPath_ executes _action_ doing then a _type_ ('fill' or 'stroke') and closing the path with closePath.
-	*/
-	path: function(type, action) {
-		this.ctx.beginPath();
-		action(this.ctx);
-		this.ctx[type]();
-		this.ctx.closePath();
-	},
-	
-	/*
-	   Method: getSmallerSize
-	   
-	  Returns min(width, height) for the canvas object.
-	*/
-	getSmallerSize: function() {
-		var s = this.getSize();
-		return (s.x <= s.y)? s.x : s.y;
-	}
-	
-};
-
+})();
+/*
+ * File: Hypertree.js
+ * 
+ * Author: Nicolas Garcia Belmonte
+ * 
+ * Homepage: <http://thejit.org>
+ * 
+ * Version: 1.0.8a
+ *
+ * Copyright: Copyright 2008-2009 by Nicolas Garcia Belmonte.
+ * 
+ * License: BSD License
+ * 
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the organization nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY Nicolas Garcia Belmonte ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL Nicolas Garcia Belmonte BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 
+ */
 
 /*
    Class: Complex
@@ -1350,8 +1541,8 @@ var GraphPlot = {
 	sequence: function(viz, options) {
 		options = $_.merge({
 			condition: function() { return false; },
-			step: $_.fn(),
-			onComplete: $_.fn(),
+			step: $_.empty,
+			onComplete: $_.empty,
 			duration: 200
 		}, options);
 
@@ -1413,9 +1604,8 @@ var GraphPlot = {
 	*/
 	plot: function(viz, opt) {
 		var aGraph = viz.graph, canvas = viz.canvas, id = viz.root;
-		var that = this, ctx = canvas.getContext(), GUtil = GraphUtil;
+		var that = this, ctx = canvas.getCtx(), GUtil = GraphUtil;
 		canvas.clear();
-		if(Config.drawMainCircle) canvas.drawMainCircle();
 		var T = !!aGraph.getNode(id).visited;
 		GUtil.eachNode(aGraph, function(node) {
 			GUtil.eachAdjacency(node, function(adj) {
@@ -1430,7 +1620,9 @@ var GraphPlot = {
 			});
 			ctx.save();
 			ctx.globalAlpha = node.alpha;
+			opt.onBeforePlotNode(node);
 			that.plotNode(node, canvas);
+			opt.onAfterPlotNode(node);
 	 		if(!that.labelsHidden && ctx.globalAlpha >= .95) that.plotLabel(canvas, node, opt);
 	 		else if(!that.labelsHidden && ctx.globalAlpha < .95) that.hideLabel(node);
 			ctx.restore();
@@ -1444,7 +1636,8 @@ var GraphPlot = {
 	   Plots a graph node.
 	*/
 	plotNode: function(node, canvas) {
-		var scale = canvas.getSmallerSize() / 2;
+		var size = canvas.getSize();
+		var scale = Math.min(size.width, size.height)/ 2;
 		var p = node.pos.toComplex(), pos = p.scale(scale);
 		canvas.path('fill', function(context) {
 			var prod = Config.transformNodes?  node._radius * (1 - p.squaredNorm()) : node._radius;
@@ -1462,11 +1655,12 @@ var GraphPlot = {
 		var node = adj.nodeFrom, child = adj.nodeTo, data = adj.data;
 		var pos = node.pos.toComplex(), posChild = child.pos.toComplex();
 		var centerOfCircle = this.computeArcThroughTwoPoints(pos, posChild);
-		var scale = canvas.getSmallerSize()/2;
+		var size = canvas.getSize();
+		var scale = Math.min(size.width, size.height)/2;
 		var angleBegin = Math.atan2(posChild.y - centerOfCircle.y, posChild.x - centerOfCircle.x);
-   		var angleEnd    = Math.atan2(pos.y - centerOfCircle.y, pos.x - centerOfCircle.x);
-		var sense        = this.sense(angleBegin, angleEnd);
-		var context = canvas.getContext();
+   		var angleEnd   = Math.atan2(pos.y - centerOfCircle.y, pos.x - centerOfCircle.x);
+		var sense      = this.sense(angleBegin, angleEnd);
+		var context = canvas.getCtx();
 		context.save();
 		canvas.path('stroke', function(ctx) {
 		 	if(centerOfCircle.a > 1000 || centerOfCircle.b > 1000 || centerOfCircle.ratio > 1000) {
@@ -1517,7 +1711,7 @@ var GraphPlot = {
 	*/
 	plotLabel: function(canvas, node, controller) {
 		var id = node.id, tag = this.getLabel(id);
-		if(!tag && !(tag = document.getElementById(id))) {
+		if(!tag) {
 			tag = document.createElement('div');
 			var container = this.getLabelContainer();
 			container.appendChild(tag);
@@ -1525,18 +1719,19 @@ var GraphPlot = {
 			tag.className = 'node';
 			tag.style.position = 'absolute';
 			controller.onCreateLabel(tag, node);
+			this.labels[node.id] = tag;
 		}
 		var pos = node.pos.toComplex();
 		var radius= canvas.getSize();
-		var scale = canvas.getSmallerSize() / 2;
-		var canvasPos = canvas.getPosition();
+		var scale = Math.min(radius.width, radius.height) / 2;
 		var labelPos= {
-			x: Math.round(pos.x * scale + canvasPos.x + radius.x/2),
-			y: Math.round(pos.y * scale + canvasPos.y + radius.y/2)
+			x: Math.round(pos.x * scale + radius.width/2),
+			y: Math.round(pos.y * scale + radius.height/2)
 		};
-		tag.style.left = labelPos.x + 'px';
-		tag.style.top = labelPos.y  + 'px';
-		tag.style.display = '';
+		var style = tag.style;
+		style.left = labelPos.x + 'px';
+		style.top = labelPos.y  + 'px';
+		style.display = '';
 		controller.onPlaceLabel(tag, node);
 	},
 
@@ -1583,7 +1778,7 @@ var GraphPlot = {
 	
 	(start code)
 
-	  var canvas= new Canvas('infovis', '#fff', '#fff');
+	  var canvas= new Canvas('infovis', {});
 	  var ht= new Hypertree(canvas);
 	  ht.loadTreeFromJSON(json);
 	  ht.compute();
@@ -1608,14 +1803,16 @@ var GraphPlot = {
 */
 var Hypertree = function(canvas, controller) {
 	var innerController = {
-		onBeforeCompute: $_.fn(),
-		onAfterCompute:  $_.fn(),
-		onCreateLabel:   $_.fn(),
-		onPlaceLabel:    $_.fn(),
-		onCreateElement: $_.fn(),
-		onComplete:      $_.fn(),
-		onBeforePlotLine: $_.fn(),
-		onAfterPlotLine: $_.fn(),
+		onBeforeCompute: $_.empty,
+		onAfterCompute:  $_.empty,
+		onCreateLabel:   $_.empty,
+		onPlaceLabel:    $_.empty,
+		onCreateElement: $_.empty,
+		onComplete:      $_.empty,
+		onBeforePlotLine: $_.empty,
+		onAfterPlotLine: $_.empty,
+		onBeforePlotNode: $_.empty,
+		onAfterPlotNode: $_.empty,
 		request:         false
 	};
 	
@@ -1628,7 +1825,7 @@ var Hypertree = function(canvas, controller) {
 
 	Animation.fps = Config.fps;
 	Animation.duration = Config.animationTime;
-
+	Config.labelContainer = canvas.id + "-label";
 };
 
 Hypertree.prototype = {
@@ -1927,18 +2124,18 @@ Hypertree.prototype = {
 	
 	 Performs all calculations and animation when clicking on a label specified by _id_. The label id is the same id as its homologue node.
 	*/
-	onClick: function(e) {
-		Mouse.capturePosition(e);
-		var mousePosition = Mouse.getPosition(this.canvas);
-		this.move(mousePosition);
+	onClick: function(id) {
+      var node=this.graph.getNode(id);
+		var pos = node.pos.toComplex();
+		this.move(pos,node);
 	},
 	
-	move: function(mousePosition) {
-		if(this.busy === false && mousePosition.norm() < 1) {
+	move: function(pos,node) {
+		var versor = new Complex(pos.x, pos.y);
+		if(this.busy === false && versor.norm() < 1) {
 			this.busy = true;
-			var root = this.graph.getNode(this.root), that = this;
-			this.controller.onBeforeCompute(root);
-			var versor = new Complex(mousePosition.x, mousePosition.y);
+			var that = this;
+			this.controller.onBeforeCompute(node);
 			if(versor.norm() < 1)
 				GraphPlot.animate(this, $_.merge(this.controller, {
 					modes: ['moebius'],
@@ -1948,89 +2145,8 @@ Hypertree.prototype = {
 					}
 				}), versor);
 		}
-	},
-	
-	/*
-	 Method: prepareCanvasEvents
-	
-	 Adds a click handler to the canvas in order to translate the Hypertree when clicking anywhere on the canvas. You could set a translation handler on the labels and not activate this one if you want to. You can perform that by using a controller <http://blog.thejit.org/?p=8>
-	*/
-	prepareCanvasEvents: function() {
-		var that = this;
-		this.canvas.canvas.onclick = function(e) { that.onClick(e); };
-	}
-	
+	}	
 };
-
-
-/*
-   Class: Mouse
-
-   A multi-purpose Mouse class.
-*/
-var Mouse = {
-	  
-	  position: null,
-
-		/*
-		   Method: getPosition
-		
-		   Returns mouse position relative to canvas.
-		
-		   Parameters:
-		
-		      canvas - A canvas object.
-		
-		   Returns:
-		
-		      A Complex instance representing the mouse position on the canvas.
-		*/
-		getPosition: function (canvas) {
-			var posx = this.posx;
-			var posy = this.posy;
-			var position = canvas.getPosition();
-			var s = canvas.getSmallerSize();
-			var size = canvas.getSize();
-			var coordinates= {
-			  x: ((posx - position.x) - size.x / 2) / (s / 2),
-			  y: ((posy - position.y) - size.y / 2) / (s / 2)
-			};
-			
-			this.position= new Complex(coordinates.x, coordinates.y);
-			return this.position;
-		},
-
-
-		/*
-		   Method: capturePosition
-		
-		   Captures mouse position.
-		
-		   Parameters:
-		
-		      e - Triggered event.
-		*/
-	  capturePosition: function(e) {
-			var posx = 0;
-			var posy = 0;
-			if (!e) var e = window.event;
-			if (e.pageX || e.pageY) 	{
-				posx = e.pageX;
-				posy = e.pageY;
-			}
-			else if (e.clientX || e.clientY) 	{
-				posx = e.clientX + document.body.scrollLeft
-					+ document.documentElement.scrollLeft;
-				posy = e.clientY + document.body.scrollTop
-					+ document.documentElement.scrollTop;
-			}
-			
-			this.posx= posx;
-			this.posy= posy;
-	}
-};
-
-
 
 /*
  Class: Graph

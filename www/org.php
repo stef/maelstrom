@@ -3,10 +3,11 @@
    Copyright© 2008-2009 Stefan Marsiske <my name at gmail.com> */
 include_once("maelstrom.php");
 
-if(isset($_GET['c'])) {
-   $person=$_GET['c'];
+if(isset($_GET['o'])) {
+   $org=$_GET['o'];
 } else {
-   $person=$MAILBOXOWNER;
+  print "please supply an '?o=' http get param";
+  die;
 }
 ?>
 <html>
@@ -20,19 +21,13 @@ if(isset($_GET['c'])) {
       <script type="text/javascript" charset="utf-8" src="/timecloud/timecloud.js"></script>
       <script type="text/javascript">
          $(document).ready(function() {
-            var params="&c=<?php print urlencode($person)?>";
-            var query="maelstrom.php?op=contactOrgs"+params;
-            $.getJSON(query,function(data) {
-               $('#orgs').timecloud({
-                   'timecloud': data,
-                   'winSize': 0,
-                   'urlprefix': 'org.php?o='})});
-            var query="maelstrom.php?op=secondContacts"+params;
+            var params="&o=<?php print urlencode($org)?>";
+            var query="maelstrom.php?op=orgContacts"+params;
             $.getJSON(query,function(data) {
                 $('#contacts').timecloud({
-                   'timecloud':data,
-                   'winSize': 0,
-                   'urlprefix': 'contact.php?c='})});
+                    'timecloud':data,
+                    'winSize': 0,
+                    'urlprefix': 'contact.php?c='})});
          })
       </script>
       <style type="text/css">
@@ -44,11 +39,10 @@ if(isset($_GET['c'])) {
    <body>
       <div id="content">
          <div id="header">
-            <h1 id="pagetitle"><?print $person?></h1>
+            <h1 id="pagetitle"><?print $org?></h1>
             <a href="contacts.php">back to contacts</a>
          </div>
-            <div id="orgs"></div>
-            <div id="contacts"></div>
+            <div id="contacts" />
          </div>
       </div>
    </body>

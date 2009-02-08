@@ -1,4 +1,6 @@
 <?php
+/* Maelstrom - visualizing email contacts
+   Copyright© 2008-2009 Stefan Marsiske <my name at gmail.com> */
 
 $dburl='sqlite:'.$_SERVER['DOCUMENT_ROOT'].'/maelstrom/db/messages.db';
 
@@ -14,20 +16,20 @@ function mailTimeFrame($db) {
    return array($start,$end);
 }
 
-function makeNode($name, $weight=Array()) {
-  return Array("id" => $name,
-               "name" => $name,
-               "children" => array(),
-               "weight" => $weight,
+function makeNode($name/*, $weight=Array()*/) {
+  return Array("id" => $name
+               ,"name" => $name
+               ,"children" => array()
+               ,"data" => array(array("key" => "weight", "value" => 0))
                );
 }
 
-function makeTree($db,$name,$level=2,$weight=Array()) {
-  $node=makeNode($name,$weight);
+function makeTree($db,$name,$level=2/*,$weight=Array()*/) {
+  $node=makeNode($name/*,$weight*/);
   if($level>0) {
     $cl=getContacts($db,$name);
     foreach($cl as $c) {
-      $node["children"][]=makeTree($db,$c["name"],$level-1,$c["weight"]);
+      $node["children"][]=makeTree($db,$c["name"],$level-1/*,$c["weight"]*/);
     }
   }
   return $node;
@@ -63,8 +65,8 @@ function getContacts($db,$person) {
    $results=array();
    $r=$db->query($q);
    foreach ($r as $row) {
-      $results[]=Array("name" => $row['contact'],
-                       "weight" => $row['weight']);
+      $results[]=Array("name" => $row['contact']
+                       /*,"weight" => $row['weight']*/);
    }
    return ($results);
 }

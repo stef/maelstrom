@@ -1,50 +1,72 @@
 #!/usr/bin/python
+"""
+Maelstrom - visualizing email contacts
 
-from sqlobject import *
+Copyright© 2008-2009 Stefan Marsiske <my name at gmail.com>
+
+database layer for maelstrom
+"""
+
+import sqlobject
 import psyco, sys, os
 
-class Message(SQLObject):
-   delivered=DateTimeCol()
-   messageid=StringCol()
-   headers=SQLMultipleJoin("HeaderValue")
-   sender=ForeignKey("Email")
-   path=StringCol()
-   # TODO: if mailindexer
-   # add path to raw
-   # add paths to payloads
-   # add path to mbox where message is stored
+DBPATH = os.path.abspath('db/messages.db')
+sqlobject.sqlhub.processConnection = sqlobject.connectionForURI('sqlite:' + DBPATH)
 
-class Header(SQLObject):
-   name=StringCol(unique=True)
+class Message(sqlobject.SQLObject):
+    """ represents a message object """
+    delivered = sqlobject.col.DateTimeCol()
+    messageid = sqlobject.col.StringCol()
+    headers = sqlobject.SQLMultipleJoin("HeaderValue")
+    sender = sqlobject.col.ForeignKey("Email")
+    path = sqlobject.col.StringCol()
+    # TODO: if mailindexer
+    # add path to raw
+    # add paths to payloads
+    # add path to mbox where message is stored
 
-class Email(SQLObject):
-   username=StringCol()
-   mailserver=StringCol()
-   owner=ForeignKey('Person')
+class Header(sqlobject.SQLObject):
+    """ Represents a header object, this is stored uniquely in a
+    separate table, headervalues reference these"""
+    name = sqlobject.col.StringCol(unique = True)
 
-class Person(SQLObject):
-   fullname=StringCol()
+class Email(sqlobject.SQLObject):
+    """ represents a email object, it consists of an
+    <username>@<mailserver> and an associated owner"""
+    username = sqlobject.col.StringCol()
+    mailserver = sqlobject.col.StringCol()
+    owner = sqlobject.col.ForeignKey('Person')
 
-class Role(SQLObject):
-   email=ForeignKey('Email')
-   header=ForeignKey('Header')
-   msg=ForeignKey('Message')
-   
-class HeaderValue(SQLObject):
-   value=StringCol()
-   msg=ForeignKey('Message')
-   header=ForeignKey('Header')
+class Person(sqlobject.SQLObject):
+    """ represents a person, currently only stores the name"""
+    fullname = sqlobject.col.StringCol()
+
+class Role(sqlobject.SQLObject):
+    """ represents the role of a person in respect to an email, we
+    link a message, with an email address and the according header
+    (cc, to)"""
+    email = sqlobject.col.ForeignKey('Email')
+    header = sqlobject.col.ForeignKey('Header')
+    msg = sqlobject.col.ForeignKey('Message')
+
+class HeaderValue(sqlobject.SQLObject):
+    """ this represents a header set in a message, the msg is linked
+    to the header and a value is associated."""
+    value = sqlobject.col.StringCol()
+    msg = sqlobject.col.ForeignKey('Message')
+    header = sqlobject.col.ForeignKey('Header')
 
 def main():
-   Header.createTable(ifNotExists=True)
-   HeaderValue.createTable(ifNotExists=True)
-   Person.createTable(ifNotExists=True)
-   Email.createTable(ifNotExists=True)
-   Role.createTable(ifNotExists=True)
-   Message.createTable(ifNotExists=True)
+    """ this function creates a new database"""
+    Header.createTable(ifNotExists = True)
+    HeaderValue.createTable(ifNotExists = True)
+    Person.createTable(ifNotExists = True)
+    Email.createTable(ifNotExists = True)
+    Role.createTable(ifNotExists = True)
+    Message.createTable(ifNotExists = True)
 
-sqlhub.processConnection = connectionForURI('sqlite:' + os.path.abspath('db/messages.db'))
-
-if __name__=='__main__':
-   psyco.full()
-   sys.exit(main())
+""" if being executed instead of loaded as a module, create a new
+database"""
+if (__name__ == '__main__'):
+    psyco.full()
+    sys.exit(main())

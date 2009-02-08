@@ -1,13 +1,15 @@
 <?php
+/* Maelstrom - visualizing email contacts
+   Copyright© 2008-2009 Stefan Marsiske <my name at gmail.com> */
 
-$MAILBOXOWNER="Marsiske Stefan";
+$MAILBOXOWNER=""; //IMPORTANT CONFIGURE THESE!!!!
 $dburl='sqlite:'.$_SERVER['DOCUMENT_ROOT'].'/maelstrom/db/messages.db';
 
 // get all mails from person
 
 function contactMails($db) {
    global $MAILBOXOWNER;
-   list($start, $time)=mailTimeFrame($db);
+   list($start, $end)=mailTimeFrame($db);
 
    if(isset($_GET['start'])) {
       $start=$_GET['start'];
@@ -23,8 +25,8 @@ function contactMails($db) {
 
    $q="select count(message.id) as count,
               date(message.delivered) as delivered
-         from message, role, email, person 
-         where message.id=role.msg_id and 
+         from message, role, email, person
+         where message.id=role.msg_id and
                role.email_id=email.id and
                email.owner_id==person.id and
                person.fullname=='$person'
@@ -44,7 +46,7 @@ function contactMails($db) {
 // get all contacts with weights for person
 
 function secondContacts($db) {
-   list($start, $time)=mailTimeFrame($db);
+   list($start, $end)=mailTimeFrame($db);
 
    if(isset($_GET['start'])) {
       $start=$_GET['start'];
@@ -58,7 +60,7 @@ function secondContacts($db) {
       $person=$MAILBOXOWNER;
    }
 
-   // TODO add window handling if needed, should be enough if the subquery 
+   // TODO add window handling if needed, should be enough if the subquery
    // return messages in the interval
    //and date(message.delivered)>='$start' AND
    //date(message.delivered)<'$end'";
@@ -66,16 +68,15 @@ function secondContacts($db) {
               count(person.id) as count,
               date(message.delivered) as date
          from message, role, email, person
-         where message.id in (select message.id 
-                             from message, role, email, person 
-                             where message.id==role.msg_id and 
+         where message.id in (select message.id
+                             from message, role, email, person
+                             where message.id==role.msg_id and
                                    role.email_id==email.id and
                                    email.owner_id==person.id and
                                    person.fullname like '$person') and
               message.id==role.msg_id and
               role.email_id==email.id and
-              email.owner_id==person.id and 
-              person.fullname!='$MAILBOXOWNER' and
+              email.owner_id==person.id and
               person.fullname not like '$person'
          group by contact
          order by date;";
@@ -177,6 +178,122 @@ function contactTimeCloud($db) {
    return ($results);
 }
 
+function contactOrgs($db) {
+   list($start, $end)=mailTimeFrame($db);
+
+   if(isset($_GET['c'])) {
+      $user=$_GET['c'];
+   } else {
+      $user=$MAILBOXOWNER;
+   }
+
+   if(isset($_GET['start'])) {
+      $start=$_GET['start'];
+   }
+   if(isset($_GET['end'])) {
+      $end=$_GET['end'];
+   }
+
+   $q="select mailserver as org,
+             count(role.id) as count,
+             date(message.delivered) as date 
+        from email, person, role, message
+        where role.email_id==email.id and
+             email.owner_id==person.id and
+             role.msg_id==message.id and
+             fullname='$user'
+        group by org, delivered
+        order by delivered;";
+   $results=array();
+   $curdate="00-00-00";
+   foreach ($db->query($q) as $row) {
+      //print_r($row);
+      //print "<br>";
+      $date=$row['date'];
+      if($date>$curdate) {
+         // row is a new day
+         if(isset($res)) {
+            // store the list of contact volumes in result vector
+            $results[]=array($curdate, $res);
+         }
+         // create a new list of contact volumes
+         $res=array(array($row['org'], $row['count']));
+         // set curdate to the currently created new day
+         $curdate=$date;
+      } elseif($date==$curdate) {
+         // store the contact in the current days volume list
+         $res[]=array($row['org'], $row['count']);
+      } else {
+         header("Content-type: text/plain");
+         print "curdate $curdate";
+         print "date $date";
+         print_r($row);
+      }
+   }
+   // append the last day
+   if($res) {
+      $results[]=array($curdate, $res);
+   }
+   return ($results);
+}
+
+function orgContacts($db) {
+   list($start, $end)=mailTimeFrame($db);
+
+   if(!isset($_GET['o'])) {
+     die;
+   }
+   $org=$_GET['o'];
+
+   if(isset($_GET['start'])) {
+      $start=$_GET['start'];
+   }
+   if(isset($_GET['end'])) {
+      $end=$_GET['end'];
+   }
+   $q="select person.fullname as contact,
+              count(person.id) as count,
+              date(message.delivered) as date
+         from message, role, email, person
+         where mailserver like '$org' and
+              message.id==role.msg_id and
+              role.email_id==email.id and
+              email.owner_id==person.id
+         group by contact
+         order by date;";
+   $results=array();
+   $curdate="00-00-00";
+   foreach ($db->query($q) as $row) {
+      //$results[]=array($row['contact'],$row['count'],$row['date']);
+      //print_r($row);
+      //print "<br>";
+      $date=$row['date'];
+      if($date>$curdate) {
+         // row is a new day
+         if(isset($res)) {
+            // store the list of contact volumes in result vector
+            $results[]=array($curdate, $res);
+         }
+         // create a new list of contact volumes
+         $res=array(array($row['contact'], $row['count']));
+         // set curdate to the currently created new day
+         $curdate=$date;
+      } elseif($date==$curdate) {
+         // store the contact in the current days volume list
+         $res[]=array($row['contact'], $row['count']);
+      } else {
+         print "curdate $curdate";
+         print "date $date";
+         print_r($row);
+      }
+   }
+   // append the last day
+   if($res) {
+      $results[]=array($curdate, $res);
+   }
+   return ($results);
+}
+
 function mailFrequency($db) {
    list($start, $end)=mailTimeFrame($db);
 
@@ -219,12 +336,20 @@ if(isset($_GET['op'])) {
       print json_encode(mailFrequency($db));
    }
    elseif($_GET['op']=="contactMails") {
-      //header("Content-type: text/plain");
-      print json_encode(contactMails($db));
+     //header("Content-type: text/plain");
+     print json_encode(contactMails($db));
    }
    elseif($_GET['op']=="secondContacts") {
-      //header("Content-type: text/plain");
-      print json_encode(secondContacts($db));
+     //header("Content-type: text/plain");
+     print json_encode(secondContacts($db));
+   }
+   elseif($_GET['op']=="contactOrgs") {
+     //header("Content-type: text/plain");
+     print json_encode(contactOrgs($db));
+   }
+   elseif($_GET['op']=="orgContacts") {
+     //header("Content-type: text/plain");
+     print json_encode(orgContacts($db));
    }
 }
 ?>

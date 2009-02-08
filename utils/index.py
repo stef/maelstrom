@@ -1,5 +1,8 @@
 #!/usr/bin/python
 
+# Maelstrom - visualizing email contacts
+# Copyright© 2008-2009 Stefan Marsiske <my name at gmail.com>
+
 # BUGS: the mbox parse chockes on messages that have a line starting with From
 # in the body.
 import mailbox, sys, os, psyco, datetime, email, getopt
