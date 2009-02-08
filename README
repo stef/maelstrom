@@ -32,6 +32,6 @@ HOWTO
  3. If the mails all belong to one person, you should set the MAILBOXOWNER
  variable in www/maelstrom.php
  4. direct your browser to http://<wherever-you-configured-it>/contacts.php
- or to http://<wherever-you-configured-it>/cnet.php
+ or to http://<wherever-you-configured-it>/cnet.php?c=<name of contact>
 
 have fun, s.
