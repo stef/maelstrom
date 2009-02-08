@@ -2,14 +2,39 @@
 
 # BUGS: the mbox parse chockes on messages that have a line starting with From
 # in the body.
-import mailbox, sys, os, psyco, datetime, email
+import mailbox, sys, os, psyco, datetime, email, getopt
 from sqlobject import *
 from email.utils import getaddresses, parsedate
 from lib.objects import *
 from lib.utils import decode_header
+from email.feedparser import FeedParser
 
+SUPPORTEDFORMATS=['mbox', 'cyrus']
 PERSONMAPFILE='db/persons.map'
 personmap={}
+config={}
+
+def usage():
+   print "usage: %s -d <mbox|cyrus>\n" % (sys.argv[0])
+   print "\t-h                             This Help"
+   print "\t-d <mbox|cyrus>                verbose message level"
+
+class eMessage(email.Message.Message):
+    """Message with mailbox-format-specific properties."""
+
+    def __init__(self, message=None):
+        """Initialize a Message instance."""
+        feedparser = FeedParser(email.message.Message)
+        feedparser._set_headersonly()
+        data = message.read(4096)
+        feedparser.feed(data)
+        self._become_message(feedparser.close())
+
+    def _become_message(self, message):
+        """Assume the non-format-specific state of message."""
+        for name in ('_headers', '_unixfrom', '_payload', '_charset',
+                     'preamble', 'epilogue', 'defects', '_default_type'):
+            self.__dict__[name] = message.__dict__[name]
 
 def fetchEmail(mail,owner=None):
    if(not mail):
@@ -77,10 +102,11 @@ def parseMbox(file):
 
 def parseMessage(message,file):
    # TODO refactor into own fun: create message
-   unixfrom=message.get_from().split(" ")
+   if(config.decoder=="mbox"): 
+      unixfrom=message.get_from().split(" ")
    if message['date']:
       t=parsedate(message['date'])
-   else:
+   elif(config.decoder=="mbox"): 
       t=parsedate(" ".join(unixfrom[1:]))
    try:
       timestamp=datetime.datetime(*t[:6])
@@ -93,7 +119,7 @@ def parseMessage(message,file):
    if len(senders):
       p=fetchPerson(decode_header(senders[0][0]).encode("utf-8"),senders[0][1])
       e=fetchEmail(senders[0][1],p)
-   else: 
+   elif(config.decoder=="mbox"): 
       e=fetchEmail(unixfrom[0])
    #print "msg",msg
    return Message(delivered=timestamp,messageid=message['message-id'],sender=e,path=file)
@@ -151,10 +177,36 @@ def main():
          (email,name)=line.split(" ",1)
          personmap[email]=name.strip()
    for file in sys.argv[1:]:
-      print "parsing file:", file
-      parseMbox(file)
+      print "parsing message(s):", file 
+      if(config.decoder=="mbox"):
+         parseMbox(file)
+      elif(config.decoder=="cyrus"):
+         message=eMessage(open(file))
+         msg=parseMessage(message,file)
+         if(msg):
+            parseContacts(message,msg)
+            parseHeaders(message,msg)
 
 if __name__=='__main__':
+   try:
+       opts, args = getopt.gnu_getopt(sys.argv[1:],
+                                      "hd:",
+                                      ["help",
+                                       "decoder="])
+   except getopt.GetoptError:
+       usage()
+       sys.exit(2)
+  
+   for o, a in opts:
+      if o in ("-h", "--help"):
+         usage()
+         sys.exit()
+      elif o in ("-d", "--decoder"):
+         if(a and a in SUPPORTEDFORMATS):
+            config.decoder = a
+         else:
+            usage()
+            sys.exit()
    Header.createTable(ifNotExists=True)
    HeaderValue.createTable(ifNotExists=True)
    Person.createTable(ifNotExists=True)
