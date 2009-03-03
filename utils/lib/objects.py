@@ -2,7 +2,7 @@
 """
 Maelstrom - visualizing email contacts
 
-Copyright© 2008-2009 Stefan Marsiske <my name at gmail.com>
+Copyright(c) 2008-2009 Stefan Marsiske <my name at gmail.com>
 
 database layer for maelstrom
 """
@@ -11,6 +11,8 @@ import sqlobject
 import psyco, sys, os
 
 DBPATH = os.path.abspath('db/messages.db')
+#if(CONFIG and CONFIG.has_key("database")):
+#   DBPATH = CONFIG['database']
 sqlobject.sqlhub.processConnection = sqlobject.connectionForURI('sqlite:' + DBPATH)
 
 class Message(sqlobject.SQLObject):
