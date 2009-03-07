@@ -8,9 +8,11 @@ database layer for maelstrom
 """
 
 import sqlobject
-import psyco, sys, os
+import sys, os, platform
+if(platform.machine()=='i686'):
+   import psyco
 
-DBPATH = os.path.abspath('db/messages.db')
+DBPATH = os.path.abspath('../db/messages.db')
 #if(CONFIG and CONFIG.has_key("database")):
 #   DBPATH = CONFIG['database']
 sqlobject.sqlhub.processConnection = sqlobject.connectionForURI('sqlite:' + DBPATH)
