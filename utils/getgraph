@@ -8,7 +8,7 @@
 #   the nodes are the persons
 #   the edges have a type to/cc and a weight (number of mails)
 
-import sys, os, datetime, getopt, bisect, ConfigParser, platform
+import sys, os, datetime, getopt, ConfigParser, platform
 if(platform.machine()=='i686'):
    import psyco
 from sqlobject import *
