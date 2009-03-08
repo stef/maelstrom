@@ -1,232 +1,223 @@
 #!/usr/bin/python
+"""
+Maelstrom - visualizing email contacts
+Copyright(c) 2008-2009 Stefan Marsiske <my name at gmail.com>
 
-# Maelstrom - visualizing email contacts
-# Copyright(c) 2008-2009 Stefan Marsiske <my name at gmail.com>
+extracts a directed graph from the database.
+  edges are the messages,
+  nodes are the persons
+  edges have a type to/cc and a weight (number of mails)
+"""
 
-# extracts a directed graph from the database.
-#   the edges are the messages,
-#   the nodes are the persons
-#   the edges have a type to/cc and a weight (number of mails)
-
-import sys, os, cStringIO, codecs, datetime, getopt, platform, csv #TODO , ConfigParser
+import sys, os, cStringIO, codecs, getopt, platform, csv
+#TODO import ConfigParser
 if(platform.machine()=='i686'):
    import psyco
-from sqlobject import *
-from lib.objects import *
-from lib.utils import decode_header
+from lib.objects import Role
 
 CONFIG = {'database': os.path.abspath('../db/messages.db'),
           'personmapfile' : '../db/persons.map',
-          'format': "csv", # dot|graphxml|log|csv
-          'stats': False,   # display overall stats
+          'format': "dot", # dot|graphxml|log|csv
+          'stats': True,   # display overall stats
           'egg': False,    # filter out entity:
           'egger': 'Marsiske Stefan',
           }
-#config = ConfigParser.ConfigParser()
-#config.read(['site.cfg', os.path.expanduser('~/.myapp.cfg')])
+#TODO config = ConfigParser.ConfigParser()
+#TODO config.read(['maelstrom.cfg', os.path.expanduser('~/.maelstrom.cfg')])
 
 def usage():
+   """Prints out the --help"""
    print "usage: %s" % (sys.argv[0])
    print "\t-h                                  This Help"
-   print "\t-s|--stats                          Display top ten stats on in/out contacts."
+   print "\t-s|--stats                          Display stats"
 #   print "\t-f |--format== [dot,log,graphxml]   Output format."
    print "\t-f |--format== [dot,log,csv]        Output format."
 
+class Obj:
+   """
+   abstract baseclass for node,edge,graph
+   """
+   def __getattr__(self, name):
+      if(self.__dict__.has_key(name)):
+         return self.__dict__[name]
+      else:
+         raise AttributeError, name
+
+   def __setattr__(self, name, value):
+      if(self.__dict__.has_key(name)):
+         self.__dict__[name] = value
+      else:
+         raise AttributeError, name
+
+   def __repr__(self):
+      return self.__str__()
+
+   def __str__(self):
+      return reduce(lambda y, x: y + x + ": " + repr(self.__dict__[x]) + "\n",
+                    self.__dict__.keys())
+
 def counter(start=0):
-    while True:
-        start+=1
-        yield start
-nodeIdGenerator=iter(counter(0))
-edgeIdGenerator=iter(counter(0))
+   """
+   auto incrementing id generator
+   """
+   while True:
+      start += 1
+      yield start
+# ID generators for nodes and eges
+NodeIdGenerator = iter(counter(0))
+EdgeIdGenerator = iter(counter(0))
 
-class UnicodeWriter:
-    """
-    A CSV writer which will write rows to CSV file "f",
-    which is encoded in the given encoding.
-    """
-    def __init__(self, f, dialect=csv.excel, encoding="utf-8", **kwds):
-        # Redirect output to a queue
-        self.queue = cStringIO.StringIO()
-        self.writer = csv.writer(self.queue, dialect=dialect, **kwds)
-        self.stream = f
-        self.encoder = codecs.getincrementalencoder(encoding)()
+class Node(Obj):
+   """
+   Simple graph node, that keeps track of the edges by
+    - direction,
+    - time and
+    - type/timestamp
+   """
+   def __init__(self, name):
+      self.__dict__['id'] = "n"+str(NodeIdGenerator.next())
+      self.__dict__['name'] = name
+      self.__dict__['srcTypeStamps'] = []
+      self.__dict__['dstTypeStamps'] = []
 
-    def writerow(self, row):
-        #ORIG:self.writer.writerow([s.encode("utf-8") for s in row])
-        self.writer.writerow(row)
-        # Fetch UTF-8 output from the queue ...
-        data = self.queue.getvalue()
-        data = data.decode("utf-8")
-        # ... and reencode it into the target encoding
-        data = self.encoder.encode(data)
-        # write to the target stream
-        self.stream.write(data)
-        # empty queue
-        self.queue.truncate(0)
+   def __str__(self):
+      return "%s\t(Wo:%d, Wi:%d)\n" % (self.name,
+                                       len(self.srcTypeStamps),
+                                       len(self.dstTypeStamps))
 
-class Node:
-    def __init__(self,name,receivers = []):
-        self.__dict__['id'] = "n"+str(nodeIdGenerator.next())
-        self.__dict__['name'] = name
-        self.__dict__['srcTypeStamps'] = []
-        self.__dict__['dstTypeStamps'] = []
+   def incSrcWeight(self, mode, date):
+      """
+      add an incomming edge to the node
+      """
+      self.__dict__['srcTypeStamps'].append((date, mode))
 
-    def __getattr__(self, name):
-        if(self.__dict__.has_key(name)):
-            return self.__dict__[name]
-        else:
-            raise AttributeError, name
+   def incDstWeight(self, mode, date):
+      """
+      add an outgoing edge to the node
+      """
+      self.__dict__['dstTypeStamps'].append((date, mode))
 
-    def __setattr__(self, name, value):
-        if(self.__dict__.has_key(name)):
-            self.__dict__[name] = value
-        else:
-            raise AttributeError, name
+class Edge(Obj):
+   """
+   Simple graph edge, that keeps track of the nodes by
+    - type/timestamp
+   """
+   def __init__(self, sender, receiver):
+      self.__dict__['id'] = "e"+str(EdgeIdGenerator.next())
+      self.__dict__['sender'] = sender
+      self.__dict__['to'] = receiver
+      self.__dict__['typestamps'] = []
 
-    def __str__(self):
-        #return reduce(self.__dict__.keys(), lambda y,x: y+x+": "+repr(self.__dict__[x])+"\n")
-        return "%s\t(Wo:%d, Wi:%d)\n" % (self.name,
-                                           len(self.srcTypeStamps),
-                                           len(self.dstTypeStamps))
-    def __repr__(self):
-        return self.__str__()
+   def __str__(self):
+      return "%s -> %s W:%d\n" % (self.sender,
+                                  self.to,
+                                  len(self.typestamps))
+   def incWeight(self, mode, date):
+      """
+      adjust the weight of the edge
+      """
+      self.__dict__['typestamps'].append((date, mode))
 
-    def incSrcWeight(self,type,date):
-        self.__dict__['srcTypeStamps'].append((date,type))
+class Graph(Obj):
+   """
+   graph object: implements
+    - building
+    - exporting as dot,log,csv
+    - gathering statistics
+   """
+   def __init__(self):
+      self.__dict__['nodes'] = {}
+      self.__dict__['edges'] = {}
 
-    def incDstWeight(self,type,date):
-        self.__dict__['dstTypeStamps'].append((date,type))
+   def __str__(self):
+      return "Nodes: %s\nEdges: %s\n" % (self.nodes, self.edges)
 
-class Edge:
-    def __init__(self,sender,to):
-        self.__dict__['id'] = "e"+str(edgeIdGenerator.next())
-        self.__dict__['sender'] = sender
-        self.__dict__['to'] = to
-        self.__dict__['typestamps'] = []
+   def addToGraph(self, sender, mode, to, date):
+      src = edge = dst = None
+      # create nodes if not yet seen
+      if(not sender in self.nodes.keys()):
+         src = Node(sender)
+         self.nodes[sender] = src
+      else:
+         src = self.nodes[sender]
 
-    def __getattr__(self, name):
-        if(self.__dict__.has_key(name)):
-            return self.__dict__[name]
-        else:
-            raise AttributeError, name
+      if(not to in self.nodes.keys()):
+         dst = Node(to)
+         self.nodes[to] = dst
+      else:
+         dst = self.nodes[to]
 
-    def __setattr__(self, name, value):
-        if(self.__dict__.has_key(name)):
-            self.__dict__[name] = value
-        else:
-            raise AttributeError, name
+      # create edge if a new one is found
+      if(not (sender, to) in self.edges.keys()):
+         edge = Edge(sender, to)
+         self.edges[(sender, to)] = edge
+      else:
+         edge = self.edges[(sender, to)]
 
-    def __str__(self):
-        #return reduce(self.__dict__.keys(), lambda y,x: y+x+": "+repr(self.__dict__[x])+"\n")
-        return "%s -> %s W:%d\n" % (self.sender,
-                                self.to,
-                                len(self.typestamps))
-    def __repr__(self):
-        return self.__str__()
+      # adjust weight on edge
+      edge.incWeight(mode, date)
 
-    def incWeight(self,type,date):
-        self.__dict__['typestamps'].append((date,type))
+      # adjust weight on nodes
+      src.incSrcWeight(mode, date)
+      dst.incDstWeight(mode, date)
 
-class Graph:
-    def __init__(self):
-        self.__dict__['nodes'] = {}
-        self.__dict__['edges'] = {}
+   def stats(self):
+      nodes = self.__dict__['nodes'].values()
+      nodes.sort(lambda x, y: cmp(len(y.srcTypeStamps)+len(y.dstTypeStamps),
+                                 len(x.srcTypeStamps)+len(x.dstTypeStamps)))
+      print "Top Overall\n", nodes[:10]
 
-    def __str__(self):
-        return "Nodes: %s\nEdges: %s\n" % (self.nodes, self.edges)
+      # print out top senders
+      nodes = self.__dict__['nodes'].values()
+      nodes.sort(lambda x, y: cmp(len(y.srcTypeStamps),
+                                 len(x.srcTypeStamps)))
+      print "Top Wo\n", nodes[:10]
 
-    def __getattr__(self, name):
-        if(self.__dict__.has_key(name)):
-            return self.__dict__[name]
-        else:
-            raise AttributeError, name
+      # print out top recipients
+      nodes = self.__dict__['nodes'].values()
+      nodes.sort(lambda x, y: cmp(len(y.dstTypeStamps),
+                                 len(x.dstTypeStamps)))
+      print "Top Wi\n", nodes[:10]
 
-    def __setattr__(self, name, value):
-        if(self.__dict__.has_key(name)):
-            self.__dict__[name] = value
-        else:
-            raise AttributeError, name
+      # print out top edges
+      edges = self.__dict__['edges'].values()
+      edges.sort(lambda x, y: cmp(len(y.typestamps), len(x.typestamps)))
+      print "Top Overall edges\n", edges[:10]
 
-    def __repr__(self):
-        return self.__str__()
+      if(CONFIG['egg']):
+         edges = filter(lambda x: ((x.sender!=CONFIG['egger'])), edges)
+         edges.sort(lambda x, y: cmp(len(y.typestamps), len(x.typestamps)))
+         print "Top Overall eggs\n", edges[:10]
 
-    def addToGraph(self,date,sender,type,to):
-        src = edge = dst = None
-        # create nodes if not yet seen
-        if(not sender in self.nodes.keys()):
-            src = Node(sender)
-            self.nodes[sender] = src
-        else:
-            src = self.nodes[sender]
-
-        if(not to in self.nodes.keys()):
-            dst = Node(to)
-            self.nodes[to] = dst
-        else:
-            dst = self.nodes[to]
-
-        # create edge if a new one is found
-        if(not (sender,to) in self.edges.keys()):
-            edge = Edge(sender,to)
-            self.edges[(sender,to)] = edge
-        else:
-            edge = self.edges[(sender,to)]
-
-        # adjust weight on edge
-        edge.incWeight(type,date)
-
-        # adjust weight on nodes
-        src.incSrcWeight(type,date)
-        dst.incDstWeight(type,date)
-
-    def stats(self):
-        nodes = self.__dict__['nodes'].values()
-        nodes.sort(lambda x,y: cmp(len(y.srcTypeStamps)+len(y.dstTypeStamps),
-                                   len(x.srcTypeStamps)+len(x.dstTypeStamps)))
-        print "Top Overall\n",nodes[:10]
-
-        # print out top senders
-        nodes=self.__dict__['nodes'].values()
-        nodes.sort(lambda x,y: cmp(len(y.srcTypeStamps),
-                                   len(x.srcTypeStamps)))
-        print "Top Wo\n", nodes[:10]
-
-        # print out top recipients
-        nodes=self.__dict__['nodes'].values()
-        nodes.sort(lambda x,y: cmp(len(y.dstTypeStamps),
-                                   len(x.dstTypeStamps)))
-        print "Top Wi\n", nodes[:10]
-
-        # print out top edges
-        edges = self.__dict__['edges'].values()
-        edges.sort(lambda x,y: cmp(len(y.typestamps),len(x.typestamps)))
-        print "Top Overall edges\n",edges[:10]
-
-        if(CONFIG['egg']):
-            edges=filter(lambda x: ((x.sender!=CONFIG['egger'])),edges)
-            edges.sort(lambda x,y: cmp(len(y.typestamps),len(x.typestamps)))
-            print "Top Overall eggs\n",edges[:10]
-
-    def dot(self):
-        result="digraph G {\noverlap = false;\nsplines=true;\n"
-        result+=reduce(lambda y,x: y+'%s [ label="%s"];\n' % (self.nodes[x.name].id,x.name),
-                       self.nodes.values(),"")
-        result+=reduce(lambda y,x: y+'"%s" -> "%s" [ weight="%d" ];\n' %
-                       (self.nodes[x.sender].id, self.nodes[x.to].id, len(x.typestamps)),
-                       self.edges.values(),"")
-        result+="}"
-        return result
+   def dot(self):
+      """
+      outputs the graph in graphviz dot language
+      """
+      result = "digraph G {\noverlap = false;\nsplines=true;\n"
+      result += reduce(lambda y, x: y+'%s [ label="%s"];\n' %
+                     (self.nodes[x.name].id, x.name),
+                     self.nodes.values(),"")
+      result += reduce(lambda y, x: y+'"%s" -> "%s" [ weight="%d" ];\n' %
+                     (self.nodes[x.sender].id,
+                      self.nodes[x.to].id,
+                      len(x.typestamps)),
+                     self.edges.values(),"")
+      result += "}"
+      return result
 
 class PersonMap:
-   def __init__(self,file):
-      self.__dict__['personmap']={}
-      if(os.path.exists(file)):
-         fp = open(file,'r')
+   """
+   maps names or email addresses to other names specified in a configure
+   """
+   def __init__(self, fname):
+      self.__dict__['personmap'] = {}
+      if(os.path.exists(fname)):
+         fp = open(fname,'r')
          while(fp):
             line = fp.readline()
             if not line:
-                break
-            (email,name) = line.split(" ",1)
+               break
+            (email, name) = line.split(" ", 1)
             self.__dict__['personmap'][email] = name.strip()
          fp.close()
 
@@ -236,59 +227,83 @@ class PersonMap:
       else:
          return name
 
+class UnicodeWriter:
+   """
+   A CSV writer which will write rows to CSV file "f",
+   which is encoded in the given encoding.
+   """
+   def __init__(self, f, dialect=csv.excel, encoding="utf-8", **kwds):
+      # Redirect output to a queue
+      self.queue = cStringIO.StringIO()
+      self.writer = csv.writer(self.queue, dialect=dialect, **kwds)
+      self.stream = f
+      self.encoder = codecs.getincrementalencoder(encoding)()
+
+   def writerow(self, row):
+      #ORIG:self.writer.writerow([s.encode("utf-8") for s in row])
+      self.writer.writerow(row)
+      # Fetch UTF-8 output from the queue ...
+      data = self.queue.getvalue()
+      data = data.decode("utf-8")
+      # ... and reencode it into the target encoding
+      data = self.encoder.encode(data)
+      # write to the target stream
+      self.stream.write(data)
+      # empty queue
+      self.queue.truncate(0)
+
+def getName(email):
+   """
+   returns the most specific name for an email correspondent
+   """
+   if(email and email.owner):
+      return email.owner.fullname
+   elif(email):
+      return email.username+"@"+email.mailserver
+
 def buildGraph():
    graph = Graph()
-   q = Role.select()
    personmap = PersonMap(CONFIG['personmapfile'])
-   csvcoder=None
-   if(CONFIG['format']=="csv"):
-      csvcoder=UnicodeWriter(sys.stdout)
-   for edge in q:
-      sender = edge.msg
-      if(edge.msg.sender and edge.msg.sender.owner):
-         sender = edge.msg.sender.owner.fullname
-      elif(edge.msg.sender):
-         sender = edge.msg.sender.username+"@"+edge.msg.sender.mailserver
-      sender = personmap[sender]
+   csvcoder = None
+   if(CONFIG['format'] == "csv"):
+      csvcoder = UnicodeWriter(sys.stdout)
 
-      receiver = edge.email
-      if(edge.email and edge.email.owner):
-         receiver = edge.email.owner.fullname
-      elif(edge.email):
-         receiver = edge.email.username+"@"+edge.email.mailserver
-      receiver = personmap[receiver]
+   q = Role.select()
+   for edge in q:
+      sender = personmap[getName(edge.msg.sender)]
+      receiver = personmap[getName(edge.email)]
 
       if(CONFIG['format']=="log"):
-         print edge.msg.delivered,sender, edge.header.name, receiver
+         print edge.msg.delivered, sender, edge.header.name, receiver
       elif(CONFIG['format']=="csv"):
-         csvcoder.writerow(map(lambda x: str(x),(edge.msg.delivered,sender, edge.header.name, receiver)))
+         csvcoder.writerow(map(lambda x: str(x),
+                               (edge.msg.delivered,
+                                sender,
+                                edge.header.name,
+                                receiver)))
 
-      graph.addToGraph(edge.msg.delivered,sender,edge.header.name, receiver)
+      graph.addToGraph(sender, edge.header.name, receiver, edge.msg.delivered)
    return graph
 
 def dumpResults(graph):
-    #print graph
-    if(CONFIG['format']=="dot"):
-        print graph.dot()
-    if(CONFIG['stats']):
-        print graph.stats()
+   #print graph
+   if(CONFIG['format']=="dot"):
+      print graph.dot()
+   if(CONFIG['stats']):
+      print graph.stats()
 
 def main():
-    graph = buildGraph()
-    dumpResults(graph)
-
-if __name__=='__main__':
    try:
-       opts, args = getopt.gnu_getopt(sys.argv[1:],
-                                      "hesf:d:",
-                                      ["help",
-                                       "egg",
-                                       "stats",
-                                       "format=",
-                                       "database="])
+      opts, args = getopt.gnu_getopt(sys.argv[1:],
+                                     "hesf:d:",
+                                     ["help",
+                                      "egg",
+                                      "stats",
+                                      "format=",
+                                      "database="])
    except getopt.GetoptError:
-       usage()
-       sys.exit(2)
+      usage()
+      sys.exit(2)
    for o, a in opts:
       if o in ("-h", "--help"):
          usage()
@@ -297,15 +312,19 @@ if __name__=='__main__':
          if(a and os.path.isfile(a)):
             CONFIG['database'] = a
       elif o in ("-e", "--egg"):
-          CONFIG['egg'] = False
+         CONFIG['egg'] = False
       elif o in ("-s", "--stats"):
-          CONFIG['stats'] = True
+         CONFIG['stats'] = True
       elif o in ("-f", "--format"):
          if(a and a in ("dot", "log", "graphxml", "csv")):
             CONFIG['format'] = a
          else:
             usage()
             sys.exit()
+   graph = buildGraph()
+   dumpResults(graph)
+
+if __name__ == '__main__':
    if(platform.machine()=='i686'):
       psyco.full()
    sys.exit(main())

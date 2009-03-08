@@ -60,17 +60,17 @@ class HeaderValue(sqlobject.SQLObject):
     msg = sqlobject.col.ForeignKey('Message')
     header = sqlobject.col.ForeignKey('Header')
 
-def main():
-    """ this function creates a new database"""
-    Header.createTable(ifNotExists = True)
-    HeaderValue.createTable(ifNotExists = True)
-    Person.createTable(ifNotExists = True)
-    Email.createTable(ifNotExists = True)
-    Role.createTable(ifNotExists = True)
-    Message.createTable(ifNotExists = True)
-
 """ if being executed instead of loaded as a module, create a new
 database"""
 if (__name__ == '__main__'):
-    psyco.full()
-    sys.exit(main())
+   def main():
+      """ this function creates a new database"""
+      Header.createTable(ifNotExists = True)
+      HeaderValue.createTable(ifNotExists = True)
+      Person.createTable(ifNotExists = True)
+      Email.createTable(ifNotExists = True)
+      Role.createTable(ifNotExists = True)
+      Message.createTable(ifNotExists = True)
+
+   psyco.full()
+   sys.exit(main())
