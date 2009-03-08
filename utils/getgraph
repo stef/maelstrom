@@ -25,8 +25,6 @@ CONFIG = {'database': os.path.abspath('../db/messages.db'),
 #config = ConfigParser.ConfigParser()
 #config.read(['site.cfg', os.path.expanduser('~/.myapp.cfg')])
 
-personmap = {}
-
 def usage():
    print "usage: %s" % (sys.argv[0])
    print "\t-h                                  This Help"
@@ -219,19 +217,29 @@ class Graph:
         result+="}"
         return result
 
-def loadPersonMap():
-    if(os.path.exists(CONFIG['personmapfile'])):
-        fp = open(CONFIG['personmapfile'],'r')
-        while(fp):
+class PersonMap:
+   def __init__(self,file):
+      self.__dict__['personmap']={}
+      if(os.path.exists(file)):
+         fp = open(file,'r')
+         while(fp):
             line = fp.readline()
             if not line:
                 break
             (email,name) = line.split(" ",1)
-            personmap[email] = name.strip()
+            self.__dict__['personmap'][email] = name.strip()
+         fp.close()
+
+   def __getitem__(self, name):
+      if(name and self.__dict__['personmap'].has_key(name)):
+         return self.__dict__['personmap'][name]
+      else:
+         return name
 
 def buildGraph():
    graph = Graph()
    q = Role.select()
+   personmap = PersonMap(CONFIG['personmapfile'])
    csvcoder=None
    if(CONFIG['format']=="csv"):
       csvcoder=UnicodeWriter(sys.stdout)
@@ -241,16 +249,14 @@ def buildGraph():
          sender = edge.msg.sender.owner.fullname
       elif(edge.msg.sender):
          sender = edge.msg.sender.username+"@"+edge.msg.sender.mailserver
-      if(sender and personmap.has_key(sender)):
-         sender = personmap[sender]
+      sender = personmap[sender]
 
       receiver = edge.email
       if(edge.email and edge.email.owner):
          receiver = edge.email.owner.fullname
       elif(edge.email):
          receiver = edge.email.username+"@"+edge.email.mailserver
-      if(receiver and personmap.has_key(receiver)):
-         receiver = personmap[receiver]
+      receiver = personmap[receiver]
 
       if(CONFIG['format']=="log"):
          print edge.msg.delivered,sender, edge.header.name, receiver
@@ -268,7 +274,6 @@ def dumpResults(graph):
         print graph.stats()
 
 def main():
-    loadPersonMap()
     graph = buildGraph()
     dumpResults(graph)
 
