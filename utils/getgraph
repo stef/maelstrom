@@ -257,7 +257,7 @@ def getName(email):
 
 def buildGraph():
    graph = Graph()
-   personmap = PersonMap(CFG.get('maelstrom','personmapfile'))
+   personmap = PersonMap(os.path.abspath(CFG.get('maelstrom','personmapfile')))
    csvcoder = None
    if(CFG.get('maelstrom','format') == "csv"):
       csvcoder = UnicodeWriter(sys.stdout)
@@ -305,7 +305,7 @@ def main():
          sys.exit()
       elif o in ("-d", "--database"):
          if(a and os.path.isfile(a)):
-            CFG.set('maelstrom', 'database', a)
+            CFG.set('maelstrom', 'database', os.path.abspath(a))
       elif o in ("-e", "--egg"):
          CFG.set('maelstrom','egg', False)
       elif o in ("-s", "--stats"):
