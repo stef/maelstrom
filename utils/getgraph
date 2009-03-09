@@ -9,13 +9,23 @@ extracts a directed graph from the database.
   edges have a type to/cc and a weight (number of mails)
 """
 
-import sys, os, cStringIO, codecs, getopt, platform, csv
+import sys
+import os
+import getopt
+import platform
 import ConfigParser
 if(platform.machine()=='i686'):
    import psyco
-from lib.objects import Role
 
+from lib.objects import Role
+from lib.utils import Obj, UnicodeWriter, counter
+
+# config object holding our context
 CFG = ConfigParser.ConfigParser()
+
+# ID generators for nodes and eges
+NodeIdGenerator = iter(counter(0))
+EdgeIdGenerator = iter(counter(0))
 
 def usage():
    """Prints out the --help"""
@@ -24,42 +34,6 @@ def usage():
    print "\t-s|--stats                          Display stats"
 #   print "\t-f |--format== [dot,log,graphxml]   Output format."
    print "\t-f |--format== [dot,log,csv]        Output format."
-
-class Obj:
-   """
-   abstract baseclass for node,edge,graph
-   """
-   def __getattr__(self, name):
-      if(self.__dict__.has_key(name)):
-         return self.__dict__[name]
-      else:
-         raise AttributeError, name
-
-   def __setattr__(self, name, value):
-      if(self.__dict__.has_key(name)):
-         self.__dict__[name] = value
-      else:
-         raise AttributeError, name
-
-   def __repr__(self):
-      return self.__str__()
-
-   def __str__(self):
-      return reduce(lambda y, x: "%s%s: %s\n" % (y,
-                                                 x,
-                                                 repr(self.__dict__[x])),
-                    self.__dict__.keys())
-
-def counter(start=0):
-   """
-   auto incrementing id generator
-   """
-   while True:
-      start += 1
-      yield start
-# ID generators for nodes and eges
-NodeIdGenerator = iter(counter(0))
-EdgeIdGenerator = iter(counter(0))
 
 class Node(Obj):
    """
@@ -224,53 +198,29 @@ class PersonMap:
       else:
          return name
 
-class UnicodeWriter:
-   """
-   A CSV writer which will write rows to CSV file "f",
-   which is encoded in the given encoding.
-   """
-   def __init__(self, f, dialect=csv.excel, encoding="utf-8", **kwds):
-      # Redirect output to a queue
-      self.queue = cStringIO.StringIO()
-      self.writer = csv.writer(self.queue, dialect=dialect, **kwds)
-      self.stream = f
-      self.encoder = codecs.getincrementalencoder(encoding)()
-
-   def writerow(self, row):
-      #ORIG:self.writer.writerow([s.encode("utf-8") for s in row])
-      self.writer.writerow(row)
-      # Fetch UTF-8 output from the queue ...
-      data = self.queue.getvalue()
-      data = data.decode("utf-8")
-      # ... and reencode it into the target encoding
-      data = self.encoder.encode(data)
-      # write to the target stream
-      self.stream.write(data)
-      # empty queue
-      self.queue.truncate(0)
-
-def getname(email):
-   """
-   returns the most specific name for an email correspondent
-   """
-   if(email and email.owner):
-      return email.owner.fullname
-   elif(email):
-      return email.username+"@"+email.mailserver
-
 def process():
    graph = Graph()
-   personmap = PersonMap(os.path.abspath(CFG.get('maelstrom','personmapfile')))
+   personmap = PersonMap(
+      os.path.abspath(CFG.get('maelstrom','personmapfile')))
    csvcoder = None
    if(CFG.get('maelstrom','format') == "csv"):
       csvcoder = UnicodeWriter(sys.stdout)
 
    q = Role.select()
    for edge in q:
-      sender = personmap[getname(edge.msg.sender)]
-      receiver = personmap[getname(edge.email)]
+      try:
+         sender = personmap[edge.msg.sender.getname()]
+      except AttributeError:
+         continue
+      try:
+         receiver = personmap[edge.email.getname()]
+      except AttributeError:
+         continue
       # add edge to graph
-      graph.addedge(sender, edge.header.name, receiver, edge.msg.delivered)
+      graph.addedge(sender,
+                    edge.header.name,
+                    receiver,
+                    edge.msg.delivered)
 
       # print out edge in log/csv format if necessary
       if(CFG.get('maelstrom','format') == "log"):
@@ -288,15 +238,16 @@ def process():
       print graph.stats()
 
 def init():
+   """
+   initializes the configuration from the config files, then sets the
+   command line parameters and finally passes control to the main
+   processing function
+   """
    CFG.read(['../maelstrom.cfg', os.path.expanduser('~/.maelstrom.cfg')])
    try:
-      opts, args = getopt.gnu_getopt(sys.argv[1:],
-                                     "hesf:d:",
-                                     ["help",
-                                      "egg",
-                                      "stats",
-                                      "format=",
-                                      "database="])
+      opts, args = getopt.gnu_getopt(
+         sys.argv[1:], "hesf:d:",
+         ["help", "egg", "stats", "format=", "database="])
    except getopt.GetoptError:
       usage()
       sys.exit(2)
@@ -317,6 +268,7 @@ def init():
          else:
             usage()
             sys.exit()
+   # call the main routine for processing the data
    process()
 
 if __name__ == '__main__':

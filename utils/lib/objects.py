@@ -40,6 +40,13 @@ class Email(sqlobject.SQLObject):
     username = sqlobject.col.StringCol()
     mailserver = sqlobject.col.StringCol()
     owner = sqlobject.col.ForeignKey('Person')
+    def getname(self):
+       """
+       returns the most specific name for an email correspondent
+       """
+       if(self.owner):
+          return self.owner.fullname
+       return self.username+"@"+self.mailserver
 
 class Person(sqlobject.SQLObject):
     """ represents a person, currently only stores the name"""
