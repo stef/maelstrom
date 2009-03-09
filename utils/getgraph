@@ -79,13 +79,13 @@ class Node(Obj):
                                        len(self.srcTypeStamps),
                                        len(self.dstTypeStamps))
 
-   def incSrcWeight(self, mode, date):
+   def incsrcweight(self, mode, date):
       """
       add an incomming edge to the node
       """
       self.__dict__['srcTypeStamps'].append((date, mode))
 
-   def incDstWeight(self, mode, date):
+   def incdstweight(self, mode, date):
       """
       add an outgoing edge to the node
       """
@@ -106,7 +106,7 @@ class Edge(Obj):
       return "%s -> %s W:%d\n" % (self.sender,
                                   self.to,
                                   len(self.typestamps))
-   def incWeight(self, mode, date):
+   def incweight(self, mode, date):
       """
       adjust the weight of the edge
       """
@@ -126,7 +126,9 @@ class Graph(Obj):
    def __str__(self):
       return "Nodes: %s\nEdges: %s\n" % (self.nodes, self.edges)
 
-   def addEdge(self, sender, mode, to, date):
+   def addedge(self, sender, mode, to, date):
+      """adds an edge to the graph, creating non-existing nodes as
+      necessary, adjusting weights at each object properly."""
       src = edge = dst = None
       # create nodes if not yet seen
       if(not sender in self.nodes.keys()):
@@ -149,11 +151,11 @@ class Graph(Obj):
          edge = self.edges[(sender, to)]
 
       # adjust weight on edge
-      edge.incWeight(mode, date)
+      edge.incweight(mode, date)
 
       # adjust weight on nodes
-      src.incSrcWeight(mode, date)
-      dst.incDstWeight(mode, date)
+      src.incsrcweight(mode, date)
+      dst.incdstweight(mode, date)
 
    def stats(self):
       nodes = self.__dict__['nodes'].values()
@@ -179,7 +181,8 @@ class Graph(Obj):
       print "Top Overall edges\n", edges[:10]
 
       if(CFG.get('maelstrom','egg')):
-         edges = filter(lambda x: ((x.sender!=CFG.get('maelstrom','egger'))), edges)
+         edges = filter(lambda x: (
+            x.sender!=CFG.get('maelstrom','egger')), edges)
          edges.sort(lambda x, y: cmp(len(y.typestamps), len(x.typestamps)))
          print "Top Overall eggs\n", edges[:10]
 
@@ -246,7 +249,7 @@ class UnicodeWriter:
       # empty queue
       self.queue.truncate(0)
 
-def getName(email):
+def getname(email):
    """
    returns the most specific name for an email correspondent
    """
@@ -255,7 +258,7 @@ def getName(email):
    elif(email):
       return email.username+"@"+email.mailserver
 
-def buildGraph():
+def process():
    graph = Graph()
    personmap = PersonMap(os.path.abspath(CFG.get('maelstrom','personmapfile')))
    csvcoder = None
@@ -264,9 +267,12 @@ def buildGraph():
 
    q = Role.select()
    for edge in q:
-      sender = personmap[getName(edge.msg.sender)]
-      receiver = personmap[getName(edge.email)]
+      sender = personmap[getname(edge.msg.sender)]
+      receiver = personmap[getname(edge.email)]
+      # add edge to graph
+      graph.addedge(sender, edge.header.name, receiver, edge.msg.delivered)
 
+      # print out edge in log/csv format if necessary
       if(CFG.get('maelstrom','format') == "log"):
          print edge.msg.delivered, sender, edge.header.name, receiver
       elif(CFG.get('maelstrom','format') == "csv"):
@@ -275,18 +281,13 @@ def buildGraph():
                                 sender,
                                 edge.header.name,
                                 receiver)))
-
-      graph.addEdge(sender, edge.header.name, receiver, edge.msg.delivered)
-   return graph
-
-def dumpResults(graph):
    #print graph
    if(CFG.get('maelstrom','format') == "dot"):
       print graph.dot()
    if(CFG.get('maelstrom','stats')):
       print graph.stats()
 
-def main():
+def init():
    CFG.read(['../maelstrom.cfg', os.path.expanduser('~/.maelstrom.cfg')])
    try:
       opts, args = getopt.gnu_getopt(sys.argv[1:],
@@ -307,19 +308,18 @@ def main():
          if(a and os.path.isfile(a)):
             CFG.set('maelstrom', 'database', os.path.abspath(a))
       elif o in ("-e", "--egg"):
-         CFG.set('maelstrom','egg', False)
+         CFG.set('maelstrom', 'egg', False)
       elif o in ("-s", "--stats"):
-         CFG.set('maelstrom','stats', True)
+         CFG.set('maelstrom', 'stats', True)
       elif o in ("-f", "--format"):
          if(a and a in ("dot", "log", "graphxml", "csv")):
-            CFG.set('maelstrom','format', a)
+            CFG.set('maelstrom', 'format', a)
          else:
             usage()
             sys.exit()
-   graph = buildGraph()
-   dumpResults(graph)
+   process()
 
 if __name__ == '__main__':
    if(platform.machine()=='i686'):
       psyco.full()
-   sys.exit(main())
+   sys.exit(init())
