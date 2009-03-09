@@ -10,20 +10,12 @@ extracts a directed graph from the database.
 """
 
 import sys, os, cStringIO, codecs, getopt, platform, csv
-#TODO import ConfigParser
+import ConfigParser
 if(platform.machine()=='i686'):
    import psyco
 from lib.objects import Role
 
-CONFIG = {'database': os.path.abspath('../db/messages.db'),
-          'personmapfile' : '../db/persons.map',
-          'format': "dot", # dot|graphxml|log|csv
-          'stats': True,   # display overall stats
-          'egg': False,    # filter out entity:
-          'egger': 'Marsiske Stefan',
-          }
-#TODO config = ConfigParser.ConfigParser()
-#TODO config.read(['maelstrom.cfg', os.path.expanduser('~/.maelstrom.cfg')])
+CFG = ConfigParser.ConfigParser()
 
 def usage():
    """Prints out the --help"""
@@ -53,7 +45,9 @@ class Obj:
       return self.__str__()
 
    def __str__(self):
-      return reduce(lambda y, x: y + x + ": " + repr(self.__dict__[x]) + "\n",
+      return reduce(lambda y, x: "%s%s: %s\n" % (y,
+                                                 x,
+                                                 repr(self.__dict__[x])),
                     self.__dict__.keys())
 
 def counter(start=0):
@@ -132,7 +126,7 @@ class Graph(Obj):
    def __str__(self):
       return "Nodes: %s\nEdges: %s\n" % (self.nodes, self.edges)
 
-   def addToGraph(self, sender, mode, to, date):
+   def addEdge(self, sender, mode, to, date):
       src = edge = dst = None
       # create nodes if not yet seen
       if(not sender in self.nodes.keys()):
@@ -184,8 +178,8 @@ class Graph(Obj):
       edges.sort(lambda x, y: cmp(len(y.typestamps), len(x.typestamps)))
       print "Top Overall edges\n", edges[:10]
 
-      if(CONFIG['egg']):
-         edges = filter(lambda x: ((x.sender!=CONFIG['egger'])), edges)
+      if(CFG.get('maelstrom','egg')):
+         edges = filter(lambda x: ((x.sender!=CFG.get('maelstrom','egger'))), edges)
          edges.sort(lambda x, y: cmp(len(y.typestamps), len(x.typestamps)))
          print "Top Overall eggs\n", edges[:10]
 
@@ -263,9 +257,9 @@ def getName(email):
 
 def buildGraph():
    graph = Graph()
-   personmap = PersonMap(CONFIG['personmapfile'])
+   personmap = PersonMap(CFG.get('maelstrom','personmapfile'))
    csvcoder = None
-   if(CONFIG['format'] == "csv"):
+   if(CFG.get('maelstrom','format') == "csv"):
       csvcoder = UnicodeWriter(sys.stdout)
 
    q = Role.select()
@@ -273,26 +267,27 @@ def buildGraph():
       sender = personmap[getName(edge.msg.sender)]
       receiver = personmap[getName(edge.email)]
 
-      if(CONFIG['format']=="log"):
+      if(CFG.get('maelstrom','format') == "log"):
          print edge.msg.delivered, sender, edge.header.name, receiver
-      elif(CONFIG['format']=="csv"):
+      elif(CFG.get('maelstrom','format') == "csv"):
          csvcoder.writerow(map(lambda x: str(x),
                                (edge.msg.delivered,
                                 sender,
                                 edge.header.name,
                                 receiver)))
 
-      graph.addToGraph(sender, edge.header.name, receiver, edge.msg.delivered)
+      graph.addEdge(sender, edge.header.name, receiver, edge.msg.delivered)
    return graph
 
 def dumpResults(graph):
    #print graph
-   if(CONFIG['format']=="dot"):
+   if(CFG.get('maelstrom','format') == "dot"):
       print graph.dot()
-   if(CONFIG['stats']):
+   if(CFG.get('maelstrom','stats')):
       print graph.stats()
 
 def main():
+   CFG.read(['../maelstrom.cfg', os.path.expanduser('~/.maelstrom.cfg')])
    try:
       opts, args = getopt.gnu_getopt(sys.argv[1:],
                                      "hesf:d:",
@@ -310,14 +305,14 @@ def main():
          sys.exit()
       elif o in ("-d", "--database"):
          if(a and os.path.isfile(a)):
-            CONFIG['database'] = a
+            CFG.set('maelstrom', 'database', a)
       elif o in ("-e", "--egg"):
-         CONFIG['egg'] = False
+         CFG.set('maelstrom','egg', False)
       elif o in ("-s", "--stats"):
-         CONFIG['stats'] = True
+         CFG.set('maelstrom','stats', True)
       elif o in ("-f", "--format"):
          if(a and a in ("dot", "log", "graphxml", "csv")):
-            CONFIG['format'] = a
+            CFG.set('maelstrom','format', a)
          else:
             usage()
             sys.exit()
