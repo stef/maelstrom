@@ -13,15 +13,11 @@ import sys
 import os
 import getopt
 import platform
-import ConfigParser
 if(platform.machine()=='i686'):
    import psyco
 
 from lib.objects import Role
-from lib.utils import Obj, UnicodeWriter, counter
-
-# config object holding our context
-CFG = ConfigParser.ConfigParser()
+from lib.utils import Obj, UnicodeWriter, counter, CFG
 
 # ID generators for nodes and eges
 NodeIdGenerator = iter(counter(0))
@@ -32,7 +28,7 @@ def usage():
    print "usage: %s" % (sys.argv[0])
    print "\t-h                                  This Help"
    print "\t-s|--stats                          Display stats"
-#   print "\t-f |--format== [dot,log,graphxml]   Output format."
+   print "\t-f |--format== [dot,log,csv,graphxml]   Output format."
    print "\t-f |--format== [dot,log,csv]        Output format."
 
 class Node(Obj):
@@ -49,7 +45,7 @@ class Node(Obj):
       self.__dict__['dstTypeStamps'] = []
 
    def __str__(self):
-      return "%s\t(Wo:%d, Wi:%d)\n" % (self.name,
+      return "%s\t(Sender:%d, Receiver:%d)\n" % (self.name,
                                        len(self.srcTypeStamps),
                                        len(self.dstTypeStamps))
 
@@ -141,13 +137,13 @@ class Graph(Obj):
       nodes = self.__dict__['nodes'].values()
       nodes.sort(lambda x, y: cmp(len(y.srcTypeStamps),
                                  len(x.srcTypeStamps)))
-      print "Top Wo\n", nodes[:10]
+      print "Top Senders\n", nodes[:10]
 
       # print out top recipients
       nodes = self.__dict__['nodes'].values()
       nodes.sort(lambda x, y: cmp(len(y.dstTypeStamps),
                                  len(x.dstTypeStamps)))
-      print "Top Wi\n", nodes[:10]
+      print "Top Receivers\n", nodes[:10]
 
       # print out top edges
       edges = self.__dict__['edges'].values()

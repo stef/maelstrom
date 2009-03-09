@@ -8,6 +8,10 @@ import email
 import csv
 import cStringIO
 import codecs
+import ConfigParser
+
+# config object holding our context
+CFG = ConfigParser.ConfigParser()
 
 def decode_header(text):
    """Decode a header value and return the value as a unicode string."""
