@@ -1,0 +1,106 @@
+#!/usr/bin/python
+"""
+Maelstrom - visualizing email contacts
+Copyright(c) 2009 Stefan Marsiske <my name at gmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+updates all email owners based on a simple mapping file
+the fullname of the person might be a pseudonym, so you can publish
+the results, without affecting the privacy of your peers.
+
+the mapfile should contain lines starting with an email followed by the full name:"
+john@example.com John Doe"
+jane@example.com Jane Smith"
+"""
+
+import sys
+import os
+import getopt
+import platform
+if(platform.machine()=='i686'):
+   import psyco
+
+from lib.objects import Person, Email
+
+def usage():
+   """Prints out the --help"""
+   print "usage: %s <mapfile>" % (sys.argv[0])
+   print "\t-h                                  This Help"
+   print "\t-d |--database==<sqlite.db>         Database."
+   print
+   print "the mapfile should contain lines starting with an email followed by the full name:"
+   print "john@example.com John Doe"
+   print "jane@example.com Jane Smith"
+
+def cleanNames(fname):
+   if(os.path.exists(fname)):
+      fp = open(fname,'r')
+      while(fp):
+         line = fp.readline()
+         if not line:
+            break
+         (email, name) = line.split(" ", 1)
+         dbitem=getEmail(email)
+         if not dbitem: continue
+         if dbitem.owner and not dbitem.owner.fullname==name:
+            dbitem.owner.fullname=name.strip()
+         else:
+            dbitem.owner=Person(fullname=name.strip())
+      fp.close()
+
+def getPerson(name):
+   q=Person.select(Person.q.fullname==name)
+   try:
+      return q.getOne()
+   except(SQLObjectNotFound):
+      return Person(fullname=name)
+
+def getEmail(address):
+   name,domain=address.split('@',1)
+   q=Email.selectBy(username=name, mailserver=domain)
+   try:
+      return q.getOne()
+   except:
+      print "warning:",address
+      return None
+
+def init():
+   """
+   """
+   try:
+      opts, args = getopt.gnu_getopt(
+         sys.argv[1:], "hd:",
+         ["help", "file=", "database="])
+   except getopt.GetoptError:
+      usage()
+      sys.exit(2)
+   for o, a in opts:
+      if o in ("-h", "--help"):
+         usage()
+         sys.exit()
+      elif o in ("-d", "--database"):
+         if(a and os.path.isfile(a)):
+            CFG.set('maelstrom', 'database', os.path.abspath(a))
+         else:
+            usage()
+            sys.exit()
+   apply(cleanNames,args)
+
+if __name__ == '__main__':
+   if(platform.machine()=='i686'):
+      psyco.full()
+   # init the app
+   init()
+   sys.exit(0)
