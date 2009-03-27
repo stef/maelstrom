@@ -12,9 +12,8 @@ import sys, os, platform
 if(platform.machine()=='i686'):
    import psyco
 
-DBPATH = os.path.abspath('../db/messages.db')
-#if(CONFIG and CONFIG.has_key("database")):
-#   DBPATH = CONFIG['database']
+from utils import CFG
+DBPATH = CFG.get('maelstrom','database')
 sqlobject.sqlhub.processConnection = sqlobject.connectionForURI('sqlite:' + DBPATH)
 
 class Message(sqlobject.SQLObject):

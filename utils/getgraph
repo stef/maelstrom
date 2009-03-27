@@ -3,6 +3,19 @@
 Maelstrom - visualizing email contacts
 Copyright(c) 2008-2009 Stefan Marsiske <my name at gmail.com>
 
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 extracts a directed graph from the database.
   edges are the messages,
   nodes are the persons
@@ -92,26 +105,28 @@ class Graph(Obj):
    def __init__(self):
       self.__dict__['nodes'] = {}
       self.__dict__['edges'] = {}
+      self.__dict__['nodemap'] = {}
 
    def __str__(self):
       return "Nodes: %s\nEdges: %s\n" % (self.nodes, self.edges)
+
+   def getNode(self, name):
+      res=None
+      if(not name in self.nodes.keys()):
+         res = Node(name)
+         self.nodes[name] = res
+         self.nodemap[name] = res.id
+      else:
+         res = self.nodes[name]
+      return res
 
    def addedge(self, sender, mode, to, date):
       """adds an edge to the graph, creating non-existing nodes as
       necessary, adjusting weights at each object properly."""
       src = edge = dst = None
       # create nodes if not yet seen
-      if(not sender in self.nodes.keys()):
-         src = Node(sender)
-         self.nodes[sender] = src
-      else:
-         src = self.nodes[sender]
-
-      if(not to in self.nodes.keys()):
-         dst = Node(to)
-         self.nodes[to] = dst
-      else:
-         dst = self.nodes[to]
+      src=self.getNode(sender)
+      dst=self.getNode(to)
 
       # create edge if a new one is found
       if(not (sender, to) in self.edges.keys()):
@@ -172,6 +187,16 @@ class Graph(Obj):
       result += "}"
       return result
 
+   def getEdges(self,name,dir=3):
+      """ returns a list of edges related to the node designated by
+      name. Dir is a bitmask, bit1 incomming, bit2 outgoing,
+      default=3 both directions"""
+
+      return filter(lambda x:
+                    ((dir & 1) and x.to==name) or
+                    ((dir & 2) and x.sender==name),
+                    self.edges.values())
+
 class PersonMap:
    """
    maps names or email addresses to other names specified in a configure
@@ -194,52 +219,12 @@ class PersonMap:
       else:
          return name
 
-def process():
-   graph = Graph()
-   personmap = PersonMap(
-      os.path.abspath(CFG.get('maelstrom','personmapfile')))
-   csvcoder = None
-   if(CFG.get('maelstrom','format') == "csv"):
-      csvcoder = UnicodeWriter(sys.stdout)
-
-   q = Role.select()
-   for edge in q:
-      try:
-         sender = personmap[edge.msg.sender.getname()]
-      except AttributeError:
-         continue
-      try:
-         receiver = personmap[edge.email.getname()]
-      except AttributeError:
-         continue
-      # add edge to graph
-      graph.addedge(sender,
-                    edge.header.name,
-                    receiver,
-                    edge.msg.delivered)
-
-      # print out edge in log/csv format if necessary
-      if(CFG.get('maelstrom','format') == "log"):
-         print edge.msg.delivered, sender, edge.header.name, receiver
-      elif(CFG.get('maelstrom','format') == "csv"):
-         csvcoder.writerow(map(lambda x: str(x),
-                               (edge.msg.delivered,
-                                sender,
-                                edge.header.name,
-                                receiver)))
-   #print graph
-   if(CFG.get('maelstrom','format') == "dot"):
-      print graph.dot()
-   if(CFG.get('maelstrom','stats')):
-      print graph.stats()
-
 def init():
    """
    initializes the configuration from the config files, then sets the
    command line parameters and finally passes control to the main
    processing function
    """
-   CFG.read(['../maelstrom.cfg', os.path.expanduser('~/.maelstrom.cfg')])
    try:
       opts, args = getopt.gnu_getopt(
          sys.argv[1:], "hesf:d:",
@@ -264,10 +249,53 @@ def init():
          else:
             usage()
             sys.exit()
-   # call the main routine for processing the data
-   process()
+
+def process():
+   graph = Graph()
+   personmap = PersonMap(
+      os.path.abspath(CFG.get('maelstrom','personmapfile')))
+   csvcoder = None
+   if(CFG.get('maelstrom','format') == "csv"):
+      csvcoder = UnicodeWriter(sys.stdout)
+
+   q = Role.select()
+   for edge in q:
+      # try to get the names of the participants
+      try:
+         sender = personmap[edge.msg.sender.getname()]
+      except AttributeError:
+         continue
+      try:
+         receiver = personmap[edge.email.getname()]
+      except AttributeError:
+         continue
+      # add edge to graph
+      graph.addedge(sender,
+                    edge.header.name,
+                    receiver,
+                    edge.msg.delivered)
+
+      # print out edge in log/csv format if necessary
+      if(CFG.get('maelstrom','format') == "log"):
+         print edge.msg.delivered, sender, edge.header.name, receiver
+      elif(CFG.get('maelstrom','format') == "csv"):
+         csvcoder.writerow(map(lambda x: str(x),
+                               (edge.msg.delivered,
+                                sender,
+                                edge.header.name,
+                                receiver)))
+   print graph.getEdges(CFG.get('maelstrom','testuser'))
+   #print graph
+   if(CFG.get('maelstrom','format') == "dot"):
+      print graph.dot()
+   if(CFG.get('maelstrom','stats')):
+      print graph.stats()
 
 if __name__ == '__main__':
    if(platform.machine()=='i686'):
       psyco.full()
-   sys.exit(init())
+   # init the app
+   init()
+   # call the main routine for processing the data
+   process()
+   sys.exit(0)

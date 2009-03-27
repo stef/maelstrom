@@ -9,9 +9,11 @@ import csv
 import cStringIO
 import codecs
 import ConfigParser
+import os
 
 # config object holding our context
 CFG = ConfigParser.ConfigParser()
+CFG.read(['/var/www/maelstrom/maelstrom.cfg', os.path.expanduser('~/.maelstrom.cfg')])
 
 def decode_header(text):
    """Decode a header value and return the value as a unicode string."""
