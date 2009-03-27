@@ -1,10 +1,27 @@
 #!/usr/bin/python
 
-# Maelstrom - visualizing email contacts
-# Copyright© 2008-2009 Stefan Marsiske <my name at gmail.com>
+"""
+Maelstrom - visualizing email contacts
+Copyright© 2008-2009 Stefan Marsiske <my name at gmail.com>
 
-# BUGS: the mbox parse chockes on messages that have a line starting with From
-# in the body.
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+BUGS: the mbox parse chockes on messages that have a line starting with From
+in the body.
+"""
+
 import mailbox, sys, os, psyco, datetime, email, getopt
 from sqlobject import *
 from email.utils import getaddresses, parsedate
