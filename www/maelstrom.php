@@ -4,19 +4,27 @@
 
 $MAILBOXOWNER=""; //IMPORTANT CONFIGURE THESE!!!!
 $dburl='sqlite:'.$_SERVER['DOCUMENT_ROOT'].'/maelstrom/db/messages.db';
+try {
+  $db= new PDO($dburl);
+}
+catch( PDOException $exception ){
+  die($exception->getMessage());
+}
+
+list($start, $end)=mailTimeFrame($db);
+if(isset($_GET['start'])) {
+  $start=$_GET['start'];
+}
+if(isset($_GET['end'])) {
+  $end=$_GET['end'];
+}
 
 // get all mails from person
 
 function contactMails($db) {
    global $MAILBOXOWNER;
-   list($start, $end)=mailTimeFrame($db);
+   global $start, $end;
 
-   if(isset($_GET['start'])) {
-      $start=$_GET['start'];
-   }
-   if(isset($_GET['end'])) {
-      $end=$_GET['end'];
-   }
    if(isset($_GET['c'])) {
       $person=$_GET['c'];
    } else {
@@ -46,14 +54,7 @@ function contactMails($db) {
 // get all contacts with weights for person
 
 function secondContacts($db) {
-   list($start, $end)=mailTimeFrame($db);
-
-   if(isset($_GET['start'])) {
-      $start=$_GET['start'];
-   }
-   if(isset($_GET['end'])) {
-      $end=$_GET['end'];
-   }
+   global $start, $end;
    if(isset($_GET['c'])) {
       $person=$_GET['c'];
    } else {
@@ -124,21 +125,14 @@ function mailTimeFrame($db) {
 }
 
 function contactTimeCloud($db) {
-   list($start, $end)=mailTimeFrame($db);
+   global $start, $end;
    global $MAILBOXOWNER;
-
-   if(isset($_GET['start'])) {
-      $start=$_GET['start'];
-   }
-   if(isset($_GET['end'])) {
-      $end=$_GET['end'];
-   }
 
    $q="SELECT person.fullname as contact,
                count(message.id) as count,
                date(message.delivered) as date
         FROM person, email, role, message
-        WHERE role.email_id==email.id AND 
+        WHERE role.email_id==email.id AND
               email.owner_id==person.id AND
               role.msg_id==message.id AND
               person.fullname!='$MAILBOXOWNER' AND
@@ -179,7 +173,7 @@ function contactTimeCloud($db) {
 }
 
 function contactOrgs($db) {
-   list($start, $end)=mailTimeFrame($db);
+   global $start, $end;
 
    if(isset($_GET['c'])) {
       $user=$_GET['c'];
@@ -187,16 +181,9 @@ function contactOrgs($db) {
       $user=$MAILBOXOWNER;
    }
 
-   if(isset($_GET['start'])) {
-      $start=$_GET['start'];
-   }
-   if(isset($_GET['end'])) {
-      $end=$_GET['end'];
-   }
-
    $q="select mailserver as org,
              count(role.id) as count,
-             date(message.delivered) as date 
+             date(message.delivered) as date
         from email, person, role, message
         where role.email_id==email.id and
              email.owner_id==person.id and
@@ -238,19 +225,12 @@ function contactOrgs($db) {
 }
 
 function orgContacts($db) {
-   list($start, $end)=mailTimeFrame($db);
+   global $start, $end;
 
    if(!isset($_GET['o'])) {
      die;
    }
    $org=$_GET['o'];
-
-   if(isset($_GET['start'])) {
-      $start=$_GET['start'];
-   }
-   if(isset($_GET['end'])) {
-      $end=$_GET['end'];
-   }
    $q="select person.fullname as contact,
               count(person.id) as count,
               date(message.delivered) as date
@@ -295,14 +275,7 @@ function orgContacts($db) {
 }
 
 function mailFrequency($db) {
-   list($start, $end)=mailTimeFrame($db);
-
-   if(isset($_GET['start'])) {
-      $start=$_GET['start'];
-   }
-   if(isset($_GET['end'])) {
-      $end=$_GET['end'];
-   }
+   global $start, $end;
 
    $q="SELECT date(delivered) as delivered,
              count(id) as count
@@ -319,6 +292,52 @@ function mailFrequency($db) {
    return ($results);
 }
 
+function getEdgeFrequency($db) {
+  global $_GET;
+  global $start, $end;
+  if(isset($_GET['c1'])) {
+    $c1=$_GET['c1'];
+  } else {
+    die;
+  }
+  if(isset($_GET['c2'])) {
+    $c2=$_GET['c2'];
+  } else {
+    die;
+  }
+  $q="SELECT date(delivered) as delivered,
+             count(message.id) as count
+        FROM message,
+             email as se,
+             person as sp,
+             role,
+             email as re,
+             person as rp
+        WHERE ((sp.fullname==:c1 and rp.fullname==:c2) or
+               (sp.fullname==:c2 and rp.fullname==:c1 )) and
+              date(delivered)>=:start AND
+              date(delivered)<:end and
+
+              se.id==message.sender_id and
+              sp.id==se.owner_id and
+              role.msg_id==message.id and
+              re.id==role.email_id and
+              rp.id==re.owner_id
+        GROUP BY date(delivered)
+        ORDER BY date(delivered)";
+
+  $query = $db->prepare($q);
+  $query->execute(array(":c1" => $c1,
+                        ":c2" => $c2,
+                        ":start" => $start,
+                        ":end" => $end));
+  for($i=0; $row = $query->fetch(); $i++){
+    $results[]=array('count' => $row['count'],
+                       'date' => $row['delivered']);
+  }
+  return ($results);
+}
+
 if(isset($_GET['op'])) {
    try {
       $db= new PDO($dburl);
@@ -327,10 +346,10 @@ if(isset($_GET['op'])) {
       die($exception->getMessage());
    }
 
-   if($_GET['op']=="contactTimeCloud") { 
+   if($_GET['op']=="contactTimeCloud") {
       //header("Content-type: text/plain");
       print json_encode(contactTimeCloud($db));
-   } 
+   }
    elseif($_GET['op']=="mailFrequency") {
       //header("Content-type: text/plain");
       print json_encode(mailFrequency($db));
@@ -351,5 +370,117 @@ if(isset($_GET['op'])) {
      //header("Content-type: text/plain");
      print json_encode(orgContacts($db));
    }
+   elseif($_GET['op']=="getEdgeFrequency") {
+      //header("Content-type: text/plain");
+     print json_encode(getEdgeFrequency($db)); // careful! does not take $db as a param!!!! new approach, introduces code inconsistency. :(
+   }
 }
+
+function getEdges() {
+  global $db,$_GET;
+  global $start, $end;
+  if(isset($_GET['c'])) {
+    $c=$_GET['c'];
+  } else {
+    die;
+  }
+
+  $q="select person.fullname as contact,
+             count(person.fullname) as weight
+       from person as p,
+            email,
+            message,
+            role,
+            email as rec,
+            person
+       where p.fullname==? and
+             p.id==rec.owner_id and
+             rec.id==role.email_id and
+             role.msg_id==message.id and
+             email.id==message.sender_id and
+             person.id==email.owner_id
+       group by contact
+       having count(person.fullname)>1
+       order by weight desc, contact;";
+  $cache=array();
+  $query = $db->prepare($q);
+  $query->execute(array($c));
+  for($i=0; $row = $query->fetch(); $i++){
+    if(array_key_exists($row['contact'],$cache)){
+      $cache[$row['contact']]=array('from' => $row['weight']);
+      $cache['total']+=$row['weight'];
+    } else {
+      $cache[$row['contact']]=array('from'=>$row['weight'],
+                                    'total'=>$row['weight']);
+    }
+  }
+  $q="select header.name as type,
+             p.fullname as contact,
+             count(person.fullname) as weight
+       from person,
+            email,
+            message,
+            header,
+            role,
+            email as rec,
+            person as p
+       where person.fullname==? and
+             email.owner_id==person.id and
+             message.sender_id==email.id and
+             message.id==role.msg_id and
+             role.email_id==rec.id and
+             role.header_id==header.id and
+             rec.owner_id==p.id
+       group by contact, type
+       having count(person.fullname)>1
+       order by weight desc, contact
+;";
+
+  $query = $db->prepare($q);
+  $query->execute(array($c));
+  for($i=0; $row = $query->fetch(); $i++){
+    if(array_key_exists($row['contact'],$cache)){
+      $cache[$row['contact']][$row['type']]=$row['weight'];
+      $cache[$row['contact']]['total']+=$row['weight'];
+    } else {
+      $cache[$row['contact']]=array($row['type'] => $row['weight'], 'total'=>$row['weight']);
+    }
+  }
+
+  uasort($cache,'cmpComposite');
+  foreach($cache as $key => $item) {
+    ?>
+    <div class="person" id="<?php print $key;?>">
+      <span style="float: left;"><a href="contact.php?c=<?php print urlencode($key)?>"><?php print $key?></a></span>
+      <?php foreach($item as $type => $weight) {
+              if(!strcmp($type,'total')) continue;
+      ?>
+            <div class="bar <?php print $type;?>" style="width: <?php print $weight;?>px;">
+            <?php print $weight;?>
+            </div>
+      <?php } ?>
+        <br />
+        <div class="frequency">
+           <div class="vaxis">
+             <div class="max"></div>
+             <div class="min"></div>
+           </div>
+           <div class="sparkline">Sparkline Loading...</div>
+           <div class="haxis" >
+              <span class="left"> </span>
+              <span class="right"> </span>
+           </div>
+        </div>
+    </div>
+    <?php
+  }
+}
+
+function cmpComposite ($a, $b) {
+  if($a['total']==$b['total']) {
+    return 0;
+  }
+  return ($a['total'] > $b['total']) ? -1 : 1;
+}
+
 ?>
