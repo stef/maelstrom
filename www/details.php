@@ -40,8 +40,21 @@ if(isset($_GET['c'])) {
 
       <!--[if IE]><script language="javascript" type="text/javascript" src="/timecloud/include/excanvas.js"></script><![endif]-->
       <script type="text/javascript" charset="utf-8" src="/timecloud/include/jquery.js"></script>
-      <script type="text/javascript" charset="utf-8" src="jquery.sparkline.js" ></script>
+      <script type="text/javascript" charset="utf-8" src="/timecloud/include/jquery.sparkline.js" ></script>
       <script type="text/javascript">
+
+      <?php
+        if(isset($_GET['start'])) {
+          print "var start = \"".$_GET['start']."\";";
+        } else {
+          print "var start = null;";
+        }
+        if(isset($_GET['end'])) {
+          print "var end =\"".$_GET['end']."\";";
+        } else {
+          print "var end = null;";
+        }
+      ?>
 
       $(document).ready(function() {
           loadSparklines($('.person:first'));
@@ -50,6 +63,12 @@ if(isset($_GET['c'])) {
       function loadSparklines(target) {
         if(target[0]) {
           params="&c1=<?php print $c?>&c2="+target[0].id;
+          if(start) {
+            params+="&start="+start;
+          }
+          if(end) {
+            params+="&end="+end;
+          }
           query="maelstrom.php?op=getEdgeFrequency"+params;
           $.getJSON(query,function(data) {
               drawSparkline(data,$('.frequency',target));
@@ -60,10 +79,13 @@ if(isset($_GET['c'])) {
 
       function drawSparkline(data,target) {
         // data might be sparse, insert zeroes into list
-        //var startdate = strToDate(data[0]['date']);
-        //var enddate = strToDate(data[data.length-1]['date']);
-        var startdate = strToDate("2006-01-01");
-        var enddate = strToDate("2009-01-01");
+        var startdate, enddate;
+        if(start) { startdate = strToDate(start); }
+        else { startdate = strToDate(data[0]['date']); }
+
+        if(end) { enddate = strToDate(end); }
+        else { enddate = strToDate(data[data.length-1]['date']); }
+
         var nextdate = startdate;
         var lst = [];
         var min = Infinity;

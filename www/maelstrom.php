@@ -393,7 +393,9 @@ function getEdges() {
             role,
             email as rec,
             person
-       where p.fullname==? and
+       where p.fullname==:c and
+             date(delivered)>=:start AND
+             date(delivered)<:end and
              p.id==rec.owner_id and
              rec.id==role.email_id and
              role.msg_id==message.id and
@@ -404,7 +406,9 @@ function getEdges() {
        order by weight desc, contact;";
   $cache=array();
   $query = $db->prepare($q);
-  $query->execute(array($c));
+  $query->execute(array(":c" => $c,
+                        ":start" => $start,
+                        ":end" => $end));
   for($i=0; $row = $query->fetch(); $i++){
     if(array_key_exists($row['contact'],$cache)){
       $cache[$row['contact']]=array('from' => $row['weight']);
@@ -424,7 +428,9 @@ function getEdges() {
             role,
             email as rec,
             person as p
-       where person.fullname==? and
+       where person.fullname==:c and
+             date(delivered)>=:start AND
+             date(delivered)<:end and
              email.owner_id==person.id and
              message.sender_id==email.id and
              message.id==role.msg_id and
@@ -437,7 +443,9 @@ function getEdges() {
 ;";
 
   $query = $db->prepare($q);
-  $query->execute(array($c));
+  $query->execute(array(":c" => $c,
+                        ":start" => $start,
+                        ":end" => $end));
   for($i=0; $row = $query->fetch(); $i++){
     if(array_key_exists($row['contact'],$cache)){
       $cache[$row['contact']][$row['type']]=$row['weight'];
