@@ -69,56 +69,103 @@ if(isset($_GET['c'])) {
           if(end) {
             params+="&end="+end;
           }
-          query="maelstrom.php?op=getEdgeFrequency"+params;
+          query="maelstrom.php?op=getEdgeWeights"+params;
           $.getJSON(query,function(data) {
               drawSparkline(data,$('.frequency',target));
               loadSparklines($(target).next(".person"));
             });
         }
-      };
+      }
 
-      function drawSparkline(data,target) {
+      function drawSparkline(weights,target) {
         // data might be sparse, insert zeroes into list
         var startdate, enddate;
+
+        // determine startdate: prio1 provided in query
         if(start) { startdate = strToDate(start); }
-        else { startdate = strToDate(data[0]['date']); }
+        // otherwise choose min data[x]['date']
+        else {
+          for(x in weights) {
+            data=weights[x];
+            if(data[0]) {
+              d=strToDate(data[0]['date']);
+              if(startdate==null || startdate>d) {
+                startdate = d;
+              }
+            }
+          }
+        }
 
+        // do the same for the enddate
         if(end) { enddate = strToDate(end); }
-        else { enddate = strToDate(data[data.length-1]['date']); }
+        else {
+          for(x in weights) {
+            data=weights[x];
+            if(data[0]) {
+              d=strToDate(data[data.length-1]['date']);
+              if(enddate==null || enddate<d) {
+                enddate = d;
+              }
+            }
+          }
+        }
 
-        var nextdate = startdate;
-        var lst = [];
         var min = Infinity;
         var max = -Infinity;
-        for (id in data) {
-          var curdate = strToDate(data[id]['date']);
-          while(nextdate<curdate) {
+        var res = [];
+
+        for(type in weights) {
+          data=weights[type];
+          var lst = [];
+          var nextdate = startdate;
+
+          for (id in data) {
+            var curdate = strToDate(data[id]['date']);
+            while(nextdate<curdate) {
+              lst.push(0);
+              nextdate = addDay(nextdate,1);
+            }
+            var val = parseInt(data[id]['count']);
+            if(val>max) max = val;
+            if(val<min) min = val;
+            lst.push(val);
+            nextdate = addDay(nextdate,1);
+          }
+          // fill dataset with 0 till the enddate
+          while(nextdate<enddate) {
             lst.push(0);
             nextdate = addDay(nextdate,1);
           }
-          var val = parseInt(data[id]['count']);
-          if(val>max) max = val;
-          if(val<min) min = val;
-          lst.push(val);
-          nextdate = addDay(nextdate,1);
+          res[type]=lst;
         }
-        // fill dataset with 0 till the enddate
-        while(nextdate<enddate) {
-          lst.push(0);
-          nextdate = addDay(nextdate,1);
+
+        // display the sparklines
+        for(type in res) {
+          lst=res[type];
+          switch(type) {
+          case "to":
+            color="orange";
+            break;
+          case "cc":
+            color="#A6B7BF";
+            break;
+          }
+          $('.min',target).text(min);
+          $('.max',target).text(max);
+          $('.left',target).text(dateToStr(startdate));
+          $('.right',target).text(dateToStr(enddate));
+          $('.sparkline',target).sparkline(lst, {
+            type:'line',
+                lineColor:color,
+                chartRangeMax:max,
+                chartRangeMin:0,
+                fillColor:false,
+                composite:true,
+                height:30,
+                width: $('.sparkline',target).width() });
+          $.sparkline_display_visible()
         }
-        $('.min',target).text(min);
-        $('.max',target).text(max);
-        $('.left',target).text(dateToStr(startdate));
-        $('.right',target).text(dateToStr(enddate));
-        $('.sparkline',target).sparkline(lst, {
-          type:'line',
-          lineColor:'Navy',
-          height:'30px',
-          chartRangeMin: '0',
-          width: $('.sparkline',target).width() });
-        $.sparkline_display_visible()
-      };
+      }
 
       // helper function to cope with dates
       function dateToStr(dat) {
@@ -129,19 +176,19 @@ if(isset($_GET['c'])) {
           var yy = dat.getYear();
           var year = (yy < 1000) ? yy + 1900 : yy;
           return(year + "-" + month + "-" + day);
-      };
+      }
 
       // helper function to cope with dates
       function strToDate(str) {
           var frgs = str.split("-");
           return(new Date(frgs[0],frgs[1]-1,frgs[2]));
-      };
+      }
 
       // helper function to cope with dates
       function addDay(d,n) {
           var oneday = 24*60*60*1000;
           return new Date(d.getTime() + n*oneday);
-      };
+     } 
       </script>
    </head>
    <body>

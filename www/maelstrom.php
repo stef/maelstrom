@@ -292,7 +292,7 @@ function mailFrequency($db) {
    return ($results);
 }
 
-function getEdgeFrequency($db) {
+function getEdgeTotalWeight($db) {
   global $_GET;
   global $start, $end;
   if(isset($_GET['c1'])) {
@@ -338,6 +338,63 @@ function getEdgeFrequency($db) {
   return ($results);
 }
 
+function getEdgeWeights($db) {
+  global $_GET;
+  global $start, $end;
+  if(isset($_GET['c1'])) {
+    $c1=$_GET['c1'];
+  } else {
+    die;
+  }
+  if(isset($_GET['c2'])) {
+    $c2=$_GET['c2'];
+  } else {
+    die;
+  }
+  $q="SELECT header.name as type,
+             date(delivered) as delivered,
+             count(message.id) as count
+        FROM message,
+             email as se,
+             person as sp,
+             header,
+             role,
+             email as re,
+             person as rp
+        WHERE ((sp.fullname==:c1 and rp.fullname==:c2) or
+               (sp.fullname==:c2 and rp.fullname==:c1 )) and
+              date(delivered)>=:start AND
+              date(delivered)<:end and
+
+              se.id==message.sender_id and
+              sp.id==se.owner_id and
+              role.header_id==header.id and
+              role.msg_id==message.id and
+              re.id==role.email_id and
+              rp.id==re.owner_id
+        GROUP BY type, date(delivered)
+        ORDER BY date(delivered)";
+
+  $query = $db->prepare($q);
+  if (!$query) {
+    echo "\nPDO::errorInfo():\n";
+    print_r($db->errorInfo());
+  }
+  $query->execute(array(":c1" => $c1,
+                        ":c2" => $c2,
+                        ":start" => $start,
+                        ":end" => $end));
+  // to/cc is enough since the query works both ways a-b&b-a this
+  // means we can ignore the from field
+  $results=array('to' => array(), 'cc' => array());
+  for($i=0; $row = $query->fetch(); $i++){
+    $results[$row['type']][]=array('date' => $row['delivered'],
+                     'count' => $row['count']);
+  }
+
+  return ($results);
+}
+
 if(isset($_GET['op'])) {
    try {
       $db= new PDO($dburl);
@@ -370,9 +427,13 @@ if(isset($_GET['op'])) {
      //header("Content-type: text/plain");
      print json_encode(orgContacts($db));
    }
-   elseif($_GET['op']=="getEdgeFrequency") {
+   elseif($_GET['op']=="getEdgeTotalWeight") {
       //header("Content-type: text/plain");
-     print json_encode(getEdgeFrequency($db)); // careful! does not take $db as a param!!!! new approach, introduces code inconsistency. :(
+     print json_encode(getEdgeTotalWeight($db)); // careful! does not take $db as a param!!!! new approach, introduces code inconsistency. :(
+   }
+   elseif($_GET['op']=="getEdgeWeights") {
+      //header("Content-type: text/plain");
+     print json_encode(getEdgeWeights($db)); // careful! does not take $db as a param!!!! new approach, introduces code inconsistency. :(
    }
 }
 
