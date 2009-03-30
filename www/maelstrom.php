@@ -429,11 +429,11 @@ if(isset($_GET['op'])) {
    }
    elseif($_GET['op']=="getEdgeTotalWeight") {
       //header("Content-type: text/plain");
-     print json_encode(getEdgeTotalWeight($db)); // careful! does not take $db as a param!!!! new approach, introduces code inconsistency. :(
+     print json_encode(getEdgeTotalWeight($db));
    }
    elseif($_GET['op']=="getEdgeWeights") {
       //header("Content-type: text/plain");
-     print json_encode(getEdgeWeights($db)); // careful! does not take $db as a param!!!! new approach, introduces code inconsistency. :(
+     print json_encode(getEdgeWeights($db));
    }
 }
 
